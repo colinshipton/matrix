@@ -1,16 +1,7 @@
 <?php
+// $Id$
 
 define('NUMBER', 10);
-
-/**
- * Implementation of hook_help().
- */
-function matrix_field_help($section) {
-  switch ($section) {
-    case 'admin/modules#description':
-      return t('Defines field type for table with textfields. <em>Note: Requires content.module.</em>');
-  }
-}
 
 /**
  * Implementation of hook_field_info().
@@ -127,15 +118,15 @@ function matrix_widget($op, &$node, $field, &$node_field) {
       $form[$field['field_name']] = array(
         '#tree' => TRUE,
         '#weight' => $field['widget']['weight'], 
-        '#prefix' => '<div class=\'matrix_field\'>',
+        '#prefix' => '<div class="matrix_field">',
         '#suffix' => '</div>',
       );
       
-      $prefix = '<div class=\'matrix_title\'>'. $field['widget']['label'] .'</div>';
-      $prefix .= '<table class=\'matrix\' summary=\'table with textfields\'><tr><th scope=\'col\'></th>';
+      $prefix = '<div class="matrix_title">'. $field['widget']['label'] .'</div>';
+      $prefix .= '<table class="matrix" summary="table with textfields"><tr><th scope="col"></th>';
       for ($i=1; $i<= NUMBER; $i++) {
         if (!empty($field["label_column_$i"])) {
-          $prefix .= '<th abbr=\'matrix_col\' scope=\'col\'>'. $field["label_column_$i"] . '</th>';
+          $prefix .= '<th abbr="matrix_col" scope="col">'. $field["label_column_$i"] . '</th>';
         }
       }
       
@@ -148,7 +139,7 @@ function matrix_widget($op, &$node, $field, &$node_field) {
                 $prefix .= '</tr><tr><td>'. $field["label_row_$i"] .'</td><td>';
               }
               else {
-                $prefix = '<td class=\'matrix_row_col\'>';
+                $prefix = '<td class="matrix_row_col">';
               }
               $form[$field['field_name']][$i][$j] = array(
                 '#type' => 'textfield',
@@ -192,5 +183,3 @@ function theme_matrix_table_view($node_field, $field) {
   }
   return theme('table',$header,$row,array(),$field['widget']['label']);
 }
-
-?>
