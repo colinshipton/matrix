@@ -1,7 +1,7 @@
 <?php
 // $Id$
 
-define('NUMBER', 10);
+define('NUMBER', 25);
 
 /**
  * Implementation of hook_field_info().
@@ -79,7 +79,7 @@ function matrix_field($op, &$node, $field, &$node_field, $teaser, $page) {
     case 'view':
       return theme('matrix_table_view',$node_field, $field);
     case 'update':
-      db_query("DELETE FROM {node_field_matrix_data} WHERE vid = %d",$node->vid);
+      db_query("DELETE FROM {node_field_matrix_data} WHERE vid = %d and field_name= '%s'",$node->vid, $field['field_name']);
     case 'insert':
       for ($i=1;$i<= NUMBER;$i++) {
         if (!empty($field["label_row_$i"])) {
