@@ -97,6 +97,27 @@ function matrix_field($op, &$node, $field, &$node_field, $teaser, $page) {
 }
 
 /**
+ * Implementation of hook_field_formatter_info().
+ */
+function matrix_field_formatter_info() {
+  return array(
+    'default' => array(
+      'label' => 'Table View',
+      'field types' => array('matrix'),
+    ),
+  );
+}
+
+/**
+ * Implemenation of hook_field_formatter
+ */
+function matrix_field_formatter($field, $item, $formatter, $node) {
+  global $count;
+  $count++;
+  if ($count == 1) return theme('matrix_table_view',$node->$field['field_name'], $field);
+}
+
+/**
  * Implementation of hook_widget_info().
  */
 function matrix_widget_info() {
@@ -144,7 +165,7 @@ function matrix_widget($op, &$node, $field, &$node_field) {
               $form[$field['field_name']][$i][$j] = array(
                 '#type' => 'textfield',
                 '#size' => $field['size'],
-                '#default_value' => isset($node_field[$i][$j]) ? $node_field[$i][$j] : '',
+                '#default_value' => isset($node_field[$i][$j]) ? $node_field[$i][$j] : $field['widget']['default_value'][$i][$j],
                 '#prefix' => $prefix,
                 '#suffix' => '</td>',
               );
