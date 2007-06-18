@@ -1,6 +1,5 @@
 ; $Id$
 name = Matrix Field
 description = Defines field type for table with textfields.
-version = "$Name$"
 package = CCK
 dependencies = content
