@@ -85,7 +85,7 @@ function matrix_field($op, &$node, $field, &$node_field, $teaser, $page) {
             if (!empty($node_field['matrix'][$i][$j])) {
               db_query("INSERT INTO {node_field_matrix_data} 
                 SET nid = %d, vid = %d, field_name = '%s', row = %d, col = %d, value = '%s'",
-                $node->nid, $node->vid, $field['field_name'], $i, $j, $node_field[$i][$j]);
+                $node->nid, $node->vid, $field['field_name'], $i, $j, $node_field['matrix'][$i][$j]);
             }
           }
         }
