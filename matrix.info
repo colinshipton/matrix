@@ -2,4 +2,5 @@
 name = Matrix Field
 description = Defines field type for table with textfields.
 package = CCK
-dependencies = content
+core = 6.x
+dependencies[] = content

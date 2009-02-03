@@ -41,9 +41,13 @@ TODO:
  * Adding other widgets
  
 
-
 Author:
 -------
+Original Author:
 Matthias Hutterer
 mh86@drupal.org
 m_hutterer@hotmail.com
+
+Current Maintainer:
+Aaron Fulton
+aaron@webtolife.org

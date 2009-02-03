@@ -5,18 +5,79 @@
  * Implementation of hook_install().
  */
 function matrix_install() {
-  switch ($GLOBALS['db_type']) {
-    case 'mysql':
-    case 'mysqli':
-      db_query("CREATE TABLE {node_field_matrix_data} (
-          nid int unsigned NOT NULL default '0',
-          vid int unsigned NOT NULL default '0',
-          field_name varchar(32) NOT NULL default '',
-          row int unsigned NOT NULL default '0',
-          col int unsigned NOT NULL default '0',
-          value varchar(255) NOT NULL default '',
-          PRIMARY KEY  (vid,field_name,row,col)
-        ) /*!40100 DEFAULT CHARACTER SET utf8 */;");
-      break;
-  }
+  drupal_load('module', 'content');
+  content_notify('uninstall', 'matrix');
+  drupal_install_schema('matrix'); 
+}
+
+/**
+ * Implementation of hook_uninstall().
+ */
+function matrix_uninstall() {
+  drupal_load('module', 'content');
+  content_notify('uninstall', 'matrix');
+  drupal_uninstall_schema('matrix'); 
+}
+
+/**
+ * Implementation of hook_enable().
+ */
+function matrix_enable() {
+  drupal_load('module', 'content');
+  content_notify('enable', 'matrix');
+}
+
+/**
+ * Implementation of hook_disable().
+ */
+function matrix_disable() {
+  drupal_load('module', 'content');
+  content_notify('disable', 'matrix');
+}
+
+/**
+ * Implementation of hook_schema().
+ */
+function matrix_schema() {
+  $schema['node_field_matrix_data'] = array(
+    'description' => t('The base table for matrix data.'),
+    'fields' => array(
+      'nid' => array(
+        'description' => t('The primary identifier for a node.'),
+        'type' => 'int',
+        'unsigned' => TRUE,
+        'not null' => TRUE,
+        'default' => 0),
+      'vid' => array(
+        'description' => t('The current {node_revisions}.vid version identifier.'),
+        'type' => 'int',
+        'unsigned' => TRUE,
+        'not null' => TRUE,
+        'default' => 0),
+      'field_name' => array(
+        'description' => t('The chart type for this node.'),
+        'type' => 'varchar',
+        'length' => 32,
+        'not null' => TRUE,
+        'default' => ''),
+      'row' => array(
+        'description' => t('Number of rows?'),
+        'type' => 'int',
+        'unsigned' => TRUE,
+        'not null' => TRUE,
+        'default' => 0),
+      'col' => array(
+        'description' => t('Number of columns?'),
+        'type' => 'int',
+        'unsigned' => TRUE,
+        'not null' => TRUE,
+        'default' => 0),
+      'value' => array(
+        'description' => t('Number of rows?'),
+        'type' => 'text',
+        'not null' => TRUE,
+        'default' => ''),
+      ),
+  );
+  return $schema;
 }
