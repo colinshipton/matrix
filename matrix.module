@@ -85,23 +85,26 @@ function matrix_content_is_empty($item, $field) {
  * Implementation of hook_field().
  */
 function matrix_field($op, &$node, $field, &$items, $teaser, $page) {
+  $rows = trim($field['rows']);
+  $cols = trim($field['cols']);
+  $rows = explode("\n", $rows);
+  $cols = explode("\n", $cols);
+  
   switch ($op) {
     case 'load':
       $result = db_query("SELECT value, row, col FROM {node_field_matrix_data} WHERE vid = %d AND field_name = '%s'", $node->vid, $field['field_name']);
       $values = array();
       while ($data = db_fetch_object($result)) {
-        $values[$data->row][$data->col] = $data->value;
+        $values['data'][$data->row][$data->col] = $data->value;
       }
+      $values['rows_header'] = $rows;
+      $values['cols_header'] = $cols;
       $additions = array($field['field_name'] => $values);
       return $additions;
     case 'update':
        db_query("DELETE FROM {node_field_matrix_data} WHERE vid = %d and field_name= '%s'", $node->vid, $field['field_name']);
     case 'update':
     case 'insert':
-      $rows = trim($field['rows']);
-      $cols = trim($field['cols']);
-      $rows = explode("\n", $rows);
-      $cols = explode("\n", $cols);
       $i=0; 
       foreach ($rows as $row) {
         if ($row) {
@@ -141,7 +144,7 @@ function matrix_widget_info() {
 function matrix_widget(&$form, &$form_state, $field, $items, $delta = 0) {
   $element = array(
     '#type' => $field['widget']['type'],
-    '#default_value' => $items,
+    '#default_value' => $items['data'],
   );
   return $element;
 }
@@ -283,17 +286,25 @@ function matrix_field_formatter_info() {
  * @return HTML.
  */
 function theme_matrix_formatter_default($element) {
+ $field_info = $element['#node']->$element['#field_name'];
+ $header = $field_info['cols_header'];
+ array_unshift($header, '');
   static $rendered; //since we are rendering the whole thing in one go, we don't want to rerender for each fow
   if ($rendered != TRUE) {
     $rendered = TRUE;
     //replace blank cells with a dash
-    foreach ($element['#node']->$element['#field_name'] as $row_index => $row) {
-      foreach ($row as $cell_index => $cell) {
-        if ($cell == '') {
-        //  $element['#node']->$element['#field_name'][$row_index][$cell_index] = '-';
+    foreach ($field_info['data'] as $row_index => $row) { 
+      foreach ($row as $cell_index => $cell_value) {
+        if ($cell_value == '') {
+          $data[$row_index][$cell_index] = '-';
+        }
+        else {
+          $data[$row_index][$cell_index] = $cell_value;
         }
       }
+      $row_label =  '<b>'. array_shift($field_info['rows_header']) .'</b>';
+      array_unshift($data[$row_index], $row_label); 
     }
-    return theme('table', NULL, $element['#node']->$element['#field_name']);
+    return theme('table', $header, $data);
   }
 }
