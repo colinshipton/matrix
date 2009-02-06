@@ -6,7 +6,6 @@
  * Defines simple matrix field types.
  */
 
-define('MATRIX_NUMBER', 35);
 
 /**
  * Implementation of hook_field_info().
@@ -33,39 +32,33 @@ function matrix_field_settings($op, $field) {
         '#title' => t('Size of textfields'),
         '#default_value' => isset($field['size']) ? $field['size'] : 5,
       );
-      
       $form['rows'] = array(
-        '#type' => 'fieldset',
-        '#collapsible' => TRUE,
-        '#title' => t('Rows'),
+        '#type' => 'textarea',
+        '#title' => t('Headers in Row'),
+        '#default_value' => $currfield['extra']['questions'],
+        '#description' => t('List down left side headers. One per line.') .'<br />',
+        '#cols' => 60,
+        '#rows' => 5,
+        '#weight' => -2,
+        '#required' => TRUE,
+        '#default_value' => isset($field["rows"]) ? $field["rows"] : '',
       );
-      for ($i=1; $i<= MATRIX_NUMBER; $i++) {
-        $form['rows']["label_row_$i"] = array(
-          '#type' => 'textfield',
-          '#title' => t('Label for row %i',array('%i' => $i)),
-          '#default_value' => isset($field["label_row_$i"]) ? $field["label_row_$i"] : '',
-        );
-      }
-      
       $form['cols'] = array(
-        '#type' => 'fieldset',
-        '#collapsible' => TRUE,
-        '#title' => t('Columns'),
-      );                                                
-      for ($i=1; $i<= MATRIX_NUMBER; $i++) {
-        $form['cols']["label_column_$i"] = array(
-          '#type' => 'textfield',
-          '#title' => t('Label for column %i',array('%i' => $i)),
-          '#default_value' => isset($field["label_column_$i"]) ? $field["label_column_$i"] : '',
-        );
-      }
+        '#type' => 'textarea',
+        '#title' => t("Headers in Column"),
+        '#default_value' => $currfield['extra']['questions'],
+        '#description' => t('List down top row headers. One per line.') .'<br />',
+        '#cols' => 60,
+        '#rows' => 5,
+        '#weight' => -2,
+        '#required' => TRUE,
+        '#default_value' => isset($field["cols"]) ? $field["cols"] : '',
+      );
       return $form;
       
     case 'save':
-      for ($i=1; $i<= MATRIX_NUMBER; $i++) {
-        $values[] = 'label_row_'.$i;
-        $values[] = 'label_column_'.$i;
-      }
+      $values[] = 'rows';
+      $values[] = 'cols';
       $values[] = 'size';
       return $values;
   }
@@ -74,6 +67,7 @@ function matrix_field_settings($op, $field) {
 /**
  * Implementation of hook_content_is_empty().
  */
+ //needs revisiting
 function matrix_content_is_empty($item, $field) {
   $isempty = TRUE; //assume that the matrix is empty
   for ($i=1; $i<= MATRIX_NUMBER; $i++) {
@@ -101,17 +95,27 @@ function matrix_field($op, &$node, $field, &$items, $teaser, $page) {
       $additions = array($field['field_name'] => $values);
       return $additions;
     case 'update':
-       db_query("DELETE FROM {node_field_matrix_data} WHERE vid = %d and field_name= '%s'",$node->vid, $field['field_name']);
-    case 'insert':
+       db_query("DELETE FROM {node_field_matrix_data} WHERE vid = %d and field_name= '%s'", $node->vid, $field['field_name']);
     case 'update':
-      for ($i=1; $i<= MATRIX_NUMBER; $i++) {
-        if (!empty($field["label_row_$i"])) {
-          for ($j=1; $j<= MATRIX_NUMBER; $j++) {
-            if (!empty($items[0]['matrix'][$i][$j])) {
-              db_query("INSERT INTO {node_field_matrix_data} (nid, vid, field_name, row, col, value) VALUES (%d, %d, '%s', %d, %d, '%s')",
-                $node->nid, $node->vid, $field['field_name'], $i, $j, $items[0]['matrix'][$i][$j]);
+    case 'insert':
+      $rows = trim($field['rows']);
+      $cols = trim($field['cols']);
+      $rows = explode("\n", $rows);
+      $cols = explode("\n", $cols);
+      $i=0; 
+      foreach ($rows as $row) {
+        if ($row) {
+          $j=0;
+          foreach ($cols as $col) {
+            if ($col) {
+              db_query("INSERT INTO {node_field_matrix_data} (nid, vid, field_name, row, col, value)
+                        VALUES (%d, %d, '%s', %d, %d, '%s')",
+                        $node->nid, $node->vid, $field['field_name'], $i, $j, $items[0][$i][$j]
+                      );
+              $j++;
             }
           }
+          $i++;
         }
       }
       break;
@@ -163,20 +167,23 @@ function matrix_theme() {
  * Theme the matrix elements into a table
  */
 function theme_matrix_table_form($form) {
+ // if (empty($form)) {
+ //   return t('No matrix rows and columns defined yet.');
+ // }
+
   $rows = array();
   $header = $form['header']['#value'];
-  if (isset($form['matrix'])) {
-    foreach ($form['matrix'] as $row_key => $fields) {
-      if (!empty($form['first_col']['#value'][$row_key])) {
-        $row = array();
-        $row[] = $form['first_col']['#value'][$row_key];
-        foreach ($fields as $col_key => $field) {
-          if ($field['#type'] == 'textfield') {
-            $row[] = drupal_render($form['matrix'][$row_key][$col_key]);
-          }
+
+  foreach ($form as $row_key => $fields) {
+    if (!empty($form['first_col']['#value'][$row_key])) {
+      $row = array();
+      $row[] = $form['first_col']['#value'][$row_key];
+      foreach ($fields as $col_key => $field) {
+        if ($field['#type'] == 'textfield') {
+          $row[] = drupal_render($form[$row_key][$col_key]);
         }
-        $rows[] = $row;
       }
+      $rows[] = $row;
     }
   }
   
@@ -208,38 +215,49 @@ function matrix_elements() {
  * The $fields array is in $form['#field_info'][$element['#field_name']].
  */
 function matrix_process($element, $edit, $form_state, $form) {
-//print_r($edit);
-//print_r($element['#default_value']);
   $field = $form['#field_info'][$element['#field_name']];
+  if ($field['rows'] && $field['cols']) {
+    $rows = trim($field['rows']);
+    $cols = trim($field['cols']);  
+    $rows = explode("\n", $rows);
+    $cols = explode("\n", $cols);
+  }
+  
   $processed_element = array(
     '#tree' => TRUE,
     '#weight' => $field['widget']['weight'],
     '#theme' => 'matrix_table_form', 
+    '#prefix' => '<div class="form-item matrix_field">',
+    '#suffix' => '</div>',
     '#parents' => $element['#parents'],
   );
-  $header = array();
-  $header[0] = '';
-  $first_col = array();
-  for ($i=1; $i<= MATRIX_NUMBER; $i++) {
-    if (!empty($field["label_row_$i"])) {
-      $first_col[$i] = $field["label_row_$i"];
-      for ($j=1; $j<= MATRIX_NUMBER; $j++) {
-        if (!empty($field["label_column_$j"])) {
-          $header[$j] = $field["label_column_$j"];
+      
+  if ($cols) {
+    $header = array_merge(array(''), $cols);
+  }
+  $first_col = $rows;
+  $i=0;
+  foreach ($rows as $row) {
+    if ($row) {
+      $j=0;
+      foreach ($cols as $col) {
+        if ($col) {
           $parents = $element['#parents'];
-          $parents[] = 'matrix';
           $parents[] = $i;
           $parents[] = $j;
-          $processed_element['matrix'][$i][$j] = array(
+          
+          $processed_element[$i][$j] = array(
             '#type' => 'textfield',
             '#size' => $field['size'],
-            '#parents' => $parents,
-            '#default_value' => isset($edit['matrix'][$i][$j]) ? $edit['matrix'][$i][$j] : $element['#default_value'][$i][$j],
+            '#default_value' => isset($edit[$i][$j]) ? $edit[$i][$j] : $element['#default_value'][$i][$j],
           );
+          $j++;
         }
       }
+      $i++;
     }
   }
+
   $processed_element['header'] = array('#value' => $header);
   $processed_element['first_col'] = array('#value' => $first_col);
   return $processed_element;
@@ -268,7 +286,14 @@ function theme_matrix_formatter_default($element) {
   static $rendered; //since we are rendering the whole thing in one go, we don't want to rerender for each fow
   if ($rendered != TRUE) {
     $rendered = TRUE;
+    //replace blank cells with a dash
+    foreach ($element['#node']->$element['#field_name'] as $row_index => $row) {
+      foreach ($row as $cell_index => $cell) {
+        if ($cell == '') {
+        //  $element['#node']->$element['#field_name'][$row_index][$cell_index] = '-';
+        }
+      }
+    }
     return theme('table', NULL, $element['#node']->$element['#field_name']);
   }
-  return;
 }

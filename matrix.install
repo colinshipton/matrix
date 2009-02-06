@@ -81,3 +81,21 @@ function matrix_schema() {
   );
   return $schema;
 }
+
+function matrix_update613() {
+  $result = db_query("SELECT field_name, global_settings FROM {node_field} WHERE type = 'matrix'");
+  while ($row = db_fetch_object($result)) {
+    $old = unserialize($row->global_settings);
+    foreach ($old as $item => $value) {
+      $a = explode('_', $item);
+      if ($a[0] == 'label' && $a[1] == 'row' && !empty($value)) {
+        $rows[] = $value;
+      }
+      if ($a[0] == 'label' && $a[1] == 'column' && !empty($value)) {
+        $column[] = $value;
+      }
+    }
+    $new = array('rows' => implode("\n", $rows), 'cols' => implode("\n", $column), 'size' => '15');
+    db_query("UPDATE {node_field} SET global_settings = '%s' WHERE field_name = '%s'", serialize($new), $row->field_name);
+  }
+}
