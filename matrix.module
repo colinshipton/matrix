@@ -14,7 +14,7 @@ function matrix_field_info() {
   return array(
     'matrix' => array(
       'label' => t('Matrix Field'),
-      'description' => t('Creates a grid of textfields.'),
+      'description' => t('Creates a grid of form fields.'),
     ),
   );
 }
@@ -30,7 +30,7 @@ function matrix_field_settings($op, $field) {
         '#type' => 'textfield',
         '#size' => 5,
         '#title' => t('Size of textfields'),
-        '#default_value' => isset($field['size']) ? $field['size'] : 5,
+        '#default_value' => !empty($field['size']) ? $field['size'] : 5,
       );
       $form['rows'] = array(
         '#type' => 'textarea',
@@ -144,7 +144,7 @@ function matrix_widget_info() {
 function matrix_widget(&$form, &$form_state, $field, $items, $delta = 0) {
   $element = array(
     '#type' => $field['widget']['type'],
-    '#default_value' => $items['data'],
+    '#default_value' => $items['data'], //$items['delta']['data'],
   );
   return $element;
 }
@@ -170,10 +170,6 @@ function matrix_theme() {
  * Theme the matrix elements into a table
  */
 function theme_matrix_table_form($form) {
- // if (empty($form)) {
- //   return t('No matrix rows and columns defined yet.');
- // }
-
   $rows = array();
   $header = $form['header']['#value'];
 
@@ -225,7 +221,7 @@ function matrix_process($element, $edit, $form_state, $form) {
     $rows = explode("\n", $rows);
     $cols = explode("\n", $cols);
   }
-  
+
   $processed_element = array(
     '#tree' => TRUE,
     '#weight' => $field['widget']['weight'],
@@ -238,17 +234,15 @@ function matrix_process($element, $edit, $form_state, $form) {
   if ($cols) {
     $header = array_merge(array(''), $cols);
   }
+
   $first_col = $rows;
   $i=0;
+  print_r($rows);
   foreach ($rows as $row) {
     if ($row) {
       $j=0;
       foreach ($cols as $col) {
-        if ($col) {
-          $parents = $element['#parents'];
-          $parents[] = $i;
-          $parents[] = $j;
-          
+        if ($col) {        
           $processed_element[$i][$j] = array(
             '#type' => 'textfield',
             '#size' => $field['size'],
