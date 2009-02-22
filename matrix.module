@@ -229,6 +229,13 @@ function matrix_process($element, $edit, $form_state, $form) {
     '#prefix' => '<div class="form-item matrix_field">',
     '#suffix' => '</div>',
     '#parents' => $element['#parents'],
+    '#title' => $element['#title'],
+    '#description' => $element['#description'],
+    '#required' => $element['#required'],
+    '#field_name' => $element['#field_name'],
+    '#type_name' => $element['#type_name'],
+    '#delta' => $element['#delta'],
+    '#columns' => $element['#columns'],
   );
       
   if ($cols) {
@@ -236,8 +243,8 @@ function matrix_process($element, $edit, $form_state, $form) {
   }
 
   $first_col = $rows;
+  $rows = (array)$rows;
   $i=0;
-  print_r($rows);
   foreach ($rows as $row) {
     if ($row) {
       $j=0;
@@ -302,3 +309,17 @@ function theme_matrix_formatter_default($element) {
     return theme('table', $header, $data);
   }
 }
+
+
+
+/**
+ * Implmentation of hook_form_alter()
+ *
+ * Disable the multiple values settings.  This module won't work with them.
+ */
+function matrix_form_alter(&$form, $form_state, $form_id) {
+  if ($form_id == 'content_field_edit_form' && $form['#field']['type'] == 'matrix') {
+    $form['field']['multiple']['#type'] = 'hidden'; //hide the multiple values form.  It does not work with this module!
+  }
+}
+
