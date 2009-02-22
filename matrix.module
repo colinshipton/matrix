@@ -287,10 +287,12 @@ function matrix_field_formatter_info() {
  * @return HTML.
  */
 function theme_matrix_formatter_default($element) {
- $field_info = $element['#node']->$element['#field_name'];
- $header = $field_info['cols_header'];
- array_unshift($header, '');
+  $field_info = $element['#node']->$element['#field_name'];
+  $header = $field_info['cols_header'];
+  array_unshift($header, '');
+
   static $rendered; //since we are rendering the whole thing in one go, we don't want to rerender for each fow
+
   if ($rendered != TRUE) {
     $rendered = TRUE;
     //replace blank cells with a dash
@@ -301,16 +303,23 @@ function theme_matrix_formatter_default($element) {
         }
         else {
           $data[$row_index][$cell_index] = $cell_value;
+          $show_row = $row_index;
         }
       }
       $row_label =  '<b>'. array_shift($field_info['rows_header']) .'</b>';
       array_unshift($data[$row_index], $row_label); 
     }
-    return theme('table', $header, $data);
+    
+    //strip out rows at the end of the dataset where there is no data
+    foreach ($data as $row_id => $row) {
+      if ($row_id <= $show_row) {
+        $flushed_data[] = $row;
+      }
+    }
+    
+    return theme('table', $header, $flushed_data);
   }
 }
-
-
 
 /**
  * Implmentation of hook_form_alter()
