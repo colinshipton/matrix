@@ -66,19 +66,10 @@ function matrix_field_settings($op, $field) {
 
 /**
  * Implementation of hook_content_is_empty().
+ * Since this module does not allow multiple values, this function serves no purpose.
  */
- //needs revisiting
 function matrix_content_is_empty($item, $field) {
-  $isempty = TRUE; //assume that the matrix is empty
-  for ($i=1; $i<= MATRIX_NUMBER; $i++) {
-    for ($j=1; $j<= MATRIX_NUMBER; $j++) {
-      if ($item[$i][$j] != '') {
-        $isempty = FALSE;
-      }
-    }
-  }
   return FALSE;
-  //return $isempty;
 }
 
 /**
@@ -273,7 +264,7 @@ function matrix_process($element, $edit, $form_state, $form) {
 function matrix_field_formatter_info() {
   return array(
     'default' => array(
-      'label' => t('Title, as matrix (default)'),
+      'label' => t('Data grid (default)'),
       'field types' => array('matrix'),
     ),
   );
@@ -288,13 +279,17 @@ function matrix_field_formatter_info() {
  */
 function theme_matrix_formatter_default($element) {
   $field_info = $element['#node']->$element['#field_name'];
+  if (!is_array($field_info['cols_header']) || !is_array($field_info['data'])) {
+    return;
+  }
+
   $header = $field_info['cols_header'];
   array_unshift($header, '');
 
   static $rendered; //since we are rendering the whole thing in one go, we don't want to rerender for each fow
 
-  if ($rendered != TRUE) {
-    $rendered = TRUE;
+  if ($rendered[$element['#field_name']] != TRUE) {
+    $rendered[$element['#field_name']] = TRUE;
     //replace blank cells with a dash
     foreach ($field_info['data'] as $row_index => $row) { 
       foreach ($row as $cell_index => $cell_value) {
@@ -309,7 +304,18 @@ function theme_matrix_formatter_default($element) {
       $row_label =  '<b>'. array_shift($field_info['rows_header']) .'</b>';
       array_unshift($data[$row_index], $row_label); 
     }
-    
+
+    //add blank cells if the number of rows/columns is different to the number of headers
+    //this can happen when columns/rows are added to an existing content type
+    $row_count = count($data[0]);
+    if ($row_count < count($header)) {
+      for($i = $row_count; $i < count($header); $i++) {
+        for ($j = 0; $j < count($data); $j++) {
+          $data[$j][$i] = '-';
+        }
+      }
+    }
+     
     //strip out rows at the end of the dataset where there is no data
     foreach ($data as $row_id => $row) {
       if ($row_id <= $show_row) {
