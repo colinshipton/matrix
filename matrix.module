@@ -291,7 +291,9 @@ function theme_matrix_formatter_default($element) {
   if ($rendered[$element['#field_name']] != TRUE) {
     $rendered[$element['#field_name']] = TRUE;
     //replace blank cells with a dash
+    ksort($field_info['data']);
     foreach ($field_info['data'] as $row_index => $row) { 
+      ksort($row);
       foreach ($row as $cell_index => $cell_value) {
         if ($cell_value == '') {
           $data[$row_index][$cell_index] = '-';
