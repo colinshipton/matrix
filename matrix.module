@@ -6,6 +6,44 @@
  * Defines simple matrix field types.
  */
 
+/**
+ * Implementation of hook_menu().
+ */
+function matrix_menu() {
+  $items['matrix/export/%/%'] = array( //nid, field_name
+    'title' => 'Export callback for matrix',
+    'page callback' => 'matrix_export',
+    'page arguments' => array(2, 3),
+    'access arguments' => array('export matrix'),
+    'type' => MENU_CALLBACK,
+  );
+  $items['matrix/throbber'] = array(
+    'title' => 'Menu callback for the settings form',
+    'page callback' => 'matrix_settings_throbber_callback',
+    'access arguments' => array('export matrix'),
+    'type' => MENU_CALLBACK,
+  );
+  $items['matrix/throbber/save'] = array(
+    'title' => 'Menu callback saving a new element',
+    'page callback' => 'matrix_settings_throbber_save',
+    'access arguments' => array('export matrix'),
+    'type' => MENU_CALLBACK,
+  );
+  $items['matrix/throbber/delete'] = array(
+    'title' => 'Menu callback deleting an element',
+    'page callback' => 'matrix_settings_throbber_delete',
+    'access arguments' => array('export matrix'),
+    'type' => MENU_CALLBACK,
+  );
+  return $items;
+}
+
+/**
+ * Implementation of hook_perm().
+ */
+function matrix_perm() {
+  return array('export matrix');
+}
 
 /**
  * Implementation of hook_field_info().
@@ -25,48 +63,381 @@ function matrix_field_info() {
 function matrix_field_settings($op, $field) {
   switch ($op) {
     case 'form':
-      $form = array();
-      $form['size'] = array(
-        '#type' => 'textfield',
-        '#size' => 5,
-        '#title' => t('Size of textfields'),
-        '#default_value' => !empty($field['size']) ? $field['size'] : 5,
+      drupal_add_js(drupal_get_path('module', 'matrix') .'/matrix.js');
+      drupal_add_css(drupal_get_path('module', 'matrix') .'/matrix.css');
+      
+      //prep the cache with the form elements
+      cache_set('matrix-rows-'. $field['field_name'], unserialize($field['rows_data']));
+      cache_set('matrix-cols-'. $field['field_name'], unserialize($field['cols_data']));
+      
+      $form = array();     
+      $form['cols'] = array(
+        '#type' => 'fieldset',
+        '#title' => 'Columns',
       );
-      $form['rows'] = array(
-        '#type' => 'textarea',
-        '#title' => t('Headers in Row'),
-        '#default_value' => $currfield['extra']['questions'],
+      $form['cols']['list'] = array(
+        '#type' => 'markup',
+        '#value' => matrix_settings_default('list', $field['field_name'], 'cols', $field['cols_data']),
+        '#prefix' => '<div id="edit-cols-list">',
+        '#suffix' => '</div>',
+      );
+      $form['cols']['add_cols'] = array(
+        '#type' => 'button',
+        '#value' => 'Add new column',
+        '#attributes' => array('class' => 'matrix-cols'),
+      );
+      $form['cols']['throbber'] = array(
+        '#type' => 'markup',
+        '#value' => '<div id="matrix-cols-throbber"></div>',
+      );
+      $form['cols']['cols_data'] = array(
+        '#type' => 'textarea', //this will become hidden
+        '#title' => t('Headers in Column'),
         '#description' => t('List down left side headers. One per line.') .'<br />',
         '#cols' => 60,
         '#rows' => 5,
-        '#weight' => -2,
-        '#required' => TRUE,
-        '#default_value' => isset($field["rows"]) ? $field["rows"] : '',
+        '#default_value' => matrix_settings_default('data', $field['field_name'], 'cols', $field['cols_data']),
       );
-      $form['cols'] = array(
-        '#type' => 'textarea',
-        '#title' => t("Headers in Column"),
-        '#default_value' => $currfield['extra']['questions'],
-        '#description' => t('List down top row headers. One per line.') .'<br />',
+
+       $form['rows'] = array(
+        '#type' => 'fieldset',
+        '#title' => 'Rows',
+      );
+      $form['rows']['list'] = array(
+        '#type' => 'markup',
+        '#value' => matrix_settings_default('list', $field['field_name'], 'rows', $field['rows_data']),
+        '#prefix' => '<div id="edit-rows-list">',
+        '#suffix' => '</div>',
+      );
+      $form['rows']['add_rows'] = array(
+        '#type' => 'button',
+        '#value' => 'Add new row',
+        '#attributes' => array('class' => 'matrix-rows'),
+      );
+      $form['rows']['throbber'] = array(
+        '#type' => 'markup',
+        '#value' => '<div id="matrix-rows-throbber"></div>',
+      );
+      $form['rows']['rows_data'] = array(
+        '#type' => 'textarea', //this will become hidden
+        '#title' => t('Headers in Row'),
+        '#description' => t('List down left side headers. One per line.') .'<br />',
         '#cols' => 60,
         '#rows' => 5,
-        '#weight' => -2,
-        '#required' => TRUE,
-        '#default_value' => isset($field["cols"]) ? $field["cols"] : '',
+        '#default_value' => matrix_settings_default('data', $field['field_name'], 'rows', $field['rows_data']),
       );
       return $form;
       
     case 'save':
-      $values[] = 'rows';
-      $values[] = 'cols';
-      $values[] = 'size';
+      cache_clear_all('matrix-rows-'. $field['field_name'], 'cache'); 
+      cache_clear_all('matrix-cols-'. $field['field_name'], 'cache'); 
+      $values[] = 'rows_data';
+      $values[] = 'cols_data';
       return $values;
   }
 }
 
 /**
+ * Creates a formatted list of rows/columns for display on the settings page
+ * This list is embalished with javascript
+ *
+ * @param array $data The definition to process
+ * @return HTML markup
+ */
+function matrix_settings_list($elements, $rc) {
+  $header = array(t('Title'), t('Type'), t('Edit'));
+  if (!is_array($elements)) {
+    return;
+  }
+  foreach ($elements as $id => $element) {
+    $rows[] = array($element['#title'],
+                    $element['#type'],
+                    "<div class='matrix-settings-edit'><a href='#' id='matrix-element-$rc-$id' class='matrix-$rc'>Edit</a></div>"
+                    );
+  }
+  $output .= theme('table', $header, $rows);
+  return $output;
+}
+
+
+function matrix_settings_default($item, $field_name, $rc, $field_data) {
+  $elements = unserialize($field_data);
+  
+  if ($item == 'list') {
+    $list = matrix_settings_list($elements, $rc);
+    return !empty($list) ? $list : t('please add an element');
+  }
+  elseif ($item == 'data') {
+    return serialize($elements);
+  }
+}
+
+/**
+ * AJAX callback for saving an individual element
+ * Takes parameters from $_REQUEST
+ * Saves the data into the Drupal cache
+ * Echos JSON data which contains:
+ *  serialized data (which is what will be eventually saved into the database)
+ *  list of elements for row/column
+ */
+function matrix_settings_throbber_save() {
+  $field_name = $_REQUEST['field_name'];
+  $element_id = (int)$_REQUEST['element_id'];
+  $rc = $_REQUEST['rc'];
+  $cache_response = cache_get('matrix-'. $rc .'-' .$field_name); //load existing elements from cache
+  
+  $elements = (array)$cache_response->data;
+  
+  //process the options
+  if ($_REQUEST['options'] != 'undefined') {
+    $exploded_options = explode("\n", $_REQUEST['options']);
+    foreach ($exploded_options as $o) {
+      list($key, $value) = explode('|', $o);
+      $key = trim($key);
+      $value = isset($value) ? trim($value) : $key;
+      if ($key != '') {
+        $options[$key] = $value;
+      }
+    }
+  } 
+  //build the new element
+  $data['#type'] = $_REQUEST['element_type'];
+  $data['#title'] = $_REQUEST['title'];
+  $data['#options'] = $options;
+  $data['#size'] = $_REQUEST['size'] != 'undefined' ? $_REQUEST['size'] : '';
+  $data['#dominant'] = ($_REQUEST['dominant'] == 'true') ? 1 : 0;
+  $data['#required'] = ($_REQUEST['required'] == 'true') ? 1 : 0;
+  $data['#initial'] = ($_REQUEST['initial'] == 'true') ? 1 :0;
+  
+  if ($element_id != '') {
+    $elements[$element_id] = $data;
+  }
+  else {
+    $elements[] = $data;
+  }
+  $elements = array_values($elements); //this rekeys the array so it remains sequential.
+  
+  cache_set('matrix-'. $rc .'-'. $field_name, $elements); //save all elements back to the cache
+  
+  $list .= matrix_settings_list($elements, $rc);
+  
+  echo drupal_to_js(array('list' => $list, 'data' => serialize($elements)));
+  exit();
+}
+
+/**
+ * Menu callback to delete an element
+ * This is part one of the delete process.
+ * Accepts parameters via $_REQUEST
+ * Echos a delete confirm form.
+ */
+function matrix_settings_throbber_delete() {
+  $field_name = $_REQUEST['field_name'];
+  $element_id = $_REQUEST['element_id'];
+  $confirm = $_REQUEST['confirm'];
+  $rc = $_REQUEST['rc'];
+  $cache_response = cache_get('matrix-'. $rc .'-'. $field_name); //load existing elements from cache
+  $elements = (array)$cache_response->data;
+  
+  if ($confirm == 'confirmed') {
+    unset($elements[$element_id]);
+    cache_set('matrix-'. $rc .'-'. $field_name, $elements); //save all elements back to the cache
+    
+    $list .= matrix_settings_list($elements, $rc);
+    echo drupal_to_js(array('list' => $list, 'data' => serialize($elements)));
+    exit();
+  }
+  else {
+    $output = drupal_get_form('matrix_delete_button');
+    echo $output;
+    exit();
+  }
+}
+
+/**
+ * Form definition function
+ * @return array form definition.
+ */
+function matrix_delete_button() {
+  $rc = $_REQUEST['rc'];
+  $form['delete'] = array(
+    '#type' => 'fieldset',
+    '#title' => t('Delete'),
+  );
+  $form['delete']['text'] = array(
+    '#type' => 'markup',
+    '#value' => t('Are you sure you want to delete this element?'). '<br />',
+  );
+  $form['delete']['delete_confirm'] = array(
+    '#type' => 'submit',
+    '#value' => t('Confirm'),
+    '#attributes' => array('class' => "matrix-$rc"),
+  );
+  $form['delete']['delete_cancel'] = array(
+    '#type' => 'submit',
+    '#value' => t('Cancel'),
+    '#attributes' => array('class' => "matrix-$rc"),
+  );
+  $form['delete']['element_id'] = array(
+    '#type' => 'hidden',
+    '#value' => $_REQUEST['element_id'],
+  );
+  return $form;
+}
+
+/**
+ * Menu callback for createing a new row/column
+ * $_REQUEST contains the settings of an exising row/column
+ * @return HTML form.
+ */
+function matrix_settings_throbber_callback() {
+  echo drupal_get_form('matrix_settings_throbber_callback_form');
+  exit();
+}
+
+/**
+ * Form definition for the throbber
+ * This list is called when a new field is added via the settings page or a field is edited
+ *
+ * @return form definition
+ */
+function matrix_settings_throbber_callback_form($form_state) {
+  $field_name = $form_state['post']['field_name'];
+  $rc = $form_state['post']['rc'];
+  
+  if ($form_state['post']['element_id'] != 'undefined') {
+    $element_id = $form_state['post']['element_id'];
+    $cache_response = cache_get('matrix-'. $rc .'-'. $field_name); //load existing elements from cache  
+    $elements = (array)$cache_response->data;
+    $default_values = $elements[$element_id];
+  }
+  if (!empty($form_state['post']['element_type']) && $form_state['post']['element_type'] != 'undefined') {
+    $element_type = $form_state['post']['element_type'];
+  }
+  else {
+     $element_type = $default_values['#type'];
+  }
+
+  $form['element'] = array(
+    '#type' => 'fieldset',
+    '#title' => 'add/edit'
+  );
+  $form['element']['element_id'] = array(
+    '#type' => 'hidden',
+    '#value' => $element_id,
+    '#attributes' => array('class' => "matrix-$rc"),
+  );
+  $form['element']['element_type'] = array(
+    '#type' => 'select',
+    '#options' => array('' => '- select -', 'textfield' => 'Textfield', 'select' => 'Select', 'checkbox' => 'Check box', 'radios' => 'Radio buttons', 'calculation' => 'Calculation'),
+    '#title' => t('Widget type'),
+    '#attributes' => array('class' => "matrix-$rc"),
+    '#default_value' => $element_type,
+  );
+
+  if (!empty($element_type)) { //a widget type has been chosen - render some more form
+    $form['element']['title'] = array(
+      '#type' => 'textfield',
+      '#title' => 'Title',
+      '#size' => 10,
+      '#default_value' => $default_values['#title'],
+      '#attributes' => array('class' => "matrix-$rc"),
+    );
+    
+    switch ($element_type) {
+      case 'textbox':
+        $form['element']['size'] = array(
+          '#type' => 'textfield',
+          '#title' => 'Size',
+          '#size' => 5,
+          '#default_value' => !empty($default_values['#size']) ? $default_values['#size'] : 5,
+          '#attributes' => array('class' => "matrix-$rc"),
+        );
+        break;
+      case 'select':
+      case 'radios':
+        if ($default_values['#options']) {
+          foreach ($default_values['#options'] as $key => $value) {
+            if ($key == $value) {
+              $options .= $value ."\n";
+            }
+            else {
+              $options .= $key .'|'. $value ."\n";
+            }
+          }
+        }
+        
+        $form['element']['options'] = array(
+          '#type' => 'textarea',
+          '#title' => t('Options'),
+          '#description' => t('One option per line.'),
+          '#cols' => 10,
+          '#rows' => 5,
+          '#default_value' => $options,
+          '#attributes' => array('class' => "matrix-$rc"),
+        );     
+        break;
+      
+      case 'calculation':
+        $form['element']['cal_method'] = array(
+          '#type' => 'select',
+          '#title' => t('Calculation type'),
+          '#options' => array('select' => t('- select one -'), 'sum' => t('Sum'), 'average' => t('Average'), 'max' => t('Maximum'), 'min' => t('Minimum'), 'mode' => t('Most common')),
+          '#description' => t('The calculation type.  Note that apart from "Most common" the other calculation types require numeric data.'),
+          '#default_value' => $default_values['#calc_method'],
+          '#attributes' => array('class' => "matrix-$rc"),
+        );
+        break;
+
+      case 'checkbox':
+        break;
+    }
+    
+    $form['element']['dominant'] = array(
+      '#type' => 'checkbox',
+      '#title' => 'Dominant',
+      '#default_value' => $default_values['#dominant'],
+      '#prefix' => '<div class="matrix-boxes-selection">',
+      '#attributes' => array('class' => "matrix-$rc"),
+    );
+    $form['element']['required'] = array(
+      '#type' => 'checkbox',
+      '#title' => 'Required',
+      '#default_value' => $default_values['#required'],
+      '#attributes' => array('class' => "matrix-$rc"),
+    );
+    $form['element']['initial'] = array(
+      '#type' => 'checkbox',
+      '#title' => 'Initially showing',
+      '#default_value' => $default_values['#initial'],
+      '#disabled' => TRUE,
+      '#suffix' => '</div><div id="matrix-clear" />',
+      '#attributes' => array('class' => "matrix-$rc"),
+    );
+    $form['element']['save'] = array(
+      '#type' => 'submit',
+      '#value' => 'Save',
+      '#attributes' => array('class' => "matrix-$rc"),
+    );
+    $form['element']['cancel'] = array(
+      '#type' => 'submit',
+      '#value' => 'Cancel',
+      '#attributes' => array('class' => "matrix-$rc"),
+    );
+    $form['element']['delete'] = array(
+      '#type' => 'submit',
+      '#value' => 'Delete',
+      '#attributes' => array('class' => "matrix-$rc"),
+    );
+  }
+  return $form;
+}
+
+/**
  * Implementation of hook_content_is_empty().
- * Since this module does not allow multiple values, this function serves no purpose.
+ *
+ * As this element does not allow multiple values, this function serves no purpose.
+ * but as a compulsary hook, it is defined here.
  */
 function matrix_content_is_empty($item, $field) {
   return FALSE;
@@ -76,11 +447,6 @@ function matrix_content_is_empty($item, $field) {
  * Implementation of hook_field().
  */
 function matrix_field($op, &$node, $field, &$items, $teaser, $page) {
-  $rows = trim($field['rows']);
-  $cols = trim($field['cols']);
-  $rows = explode("\n", $rows);
-  $cols = explode("\n", $cols);
-  
   switch ($op) {
     case 'load':
       $result = db_query("SELECT value, row, col FROM {node_field_matrix_data} WHERE vid = %d AND field_name = '%s'", $node->vid, $field['field_name']);
@@ -88,28 +454,27 @@ function matrix_field($op, &$node, $field, &$items, $teaser, $page) {
       while ($data = db_fetch_object($result)) {
         $values['data'][$data->row][$data->col] = $data->value;
       }
-      $values['rows_header'] = $rows;
-      $values['cols_header'] = $cols;
+      $values['rows_data'] = $field['rows_data'];
+      $values['cols_data'] = $field['cols_data'];
       $additions = array($field['field_name'] => $values);
       return $additions;
     case 'update':
+    case 'delete':
        db_query("DELETE FROM {node_field_matrix_data} WHERE vid = %d and field_name= '%s'", $node->vid, $field['field_name']);
     case 'update':
     case 'insert':
-      $i=0; 
-      foreach ($rows as $row) {
-        if ($row) {
-          $j=0;
-          foreach ($cols as $col) {
-            if ($col) {
-              db_query("INSERT INTO {node_field_matrix_data} (nid, vid, field_name, row, col, value)
-                        VALUES (%d, %d, '%s', %d, %d, '%s')",
-                        $node->nid, $node->vid, $field['field_name'], $i, $j, $items[0][$i][$j]
-                      );
-              $j++;
-            }
-          }
-          $i++;
+      $rows_data = unserialize($field['rows_data']);
+      $cols_data = unserialize($field['cols_data']);
+     // print_r($rows_data);
+      //print_r($field);
+      //print_r($items);
+     //die();
+      foreach ($rows_data as $i => $row) {
+        foreach ($cols_data as $j => $col) {
+          db_query("INSERT INTO {node_field_matrix_data} (nid, vid, field_name, row, col, value)
+                     VALUES (%d, %d, '%s', %d, %d, '%s')",
+                    $node->nid, $node->vid, $field['field_name'], $i, $j, $items[0][$i][$j]
+                  );
         }
       }
       break;
@@ -135,7 +500,7 @@ function matrix_widget_info() {
 function matrix_widget(&$form, &$form_state, $field, $items, $delta = 0) {
   $element = array(
     '#type' => $field['widget']['type'],
-    '#default_value' => $items['data'], //$items['delta']['data'],
+    '#default_value' => $items['data'],
   );
   return $element;
 }
@@ -161,27 +526,27 @@ function matrix_theme() {
  * Theme the matrix elements into a table
  */
 function theme_matrix_table_form($form) {
-  $rows = array();
-  $header = $form['header']['#value'];
-
-  foreach ($form as $row_key => $fields) {
-    if (!empty($form['first_col']['#value'][$row_key])) {
-      $row = array();
-      $row[] = $form['first_col']['#value'][$row_key];
-      foreach ($fields as $col_key => $field) {
-        if ($field['#type'] == 'textfield') {
-          $row[] = drupal_render($form[$row_key][$col_key]);
+  //if ($form['something']) {
+    $rows = array();
+    $header = (array)$form['#header'];
+    $first_col = (array)$form['#first_col']; 
+    foreach ($form as $row_key => $fields) {
+      if (is_numeric($row_key)) { //ignore all other properties
+        unset($row);
+        $row[] = $first_col[$row_key];
+        foreach ($fields as $col_key => $field) {
+          if (is_numeric($col_key)) {
+            $row[] = drupal_render($form[$row_key][$col_key]);
+          }
         }
+        $rows[] = $row;
       }
-      $rows[] = $row;
     }
-  }
-  
-  drupal_render($form['header']);
-  drupal_render($form['first_col']);
-  $output = drupal_render($form);
-  $output .= theme('table', $header, $rows, array('class' => 'matrix'));
-  return $output;
+    
+    $output = drupal_render($form);
+    $output .= theme('table', $header, $rows, array('class' => 'matrix'));
+    return $output;
+ // }
 }
 
 /**
@@ -206,13 +571,23 @@ function matrix_elements() {
  */
 function matrix_process($element, $edit, $form_state, $form) {
   $field = $form['#field_info'][$element['#field_name']];
-  if ($field['rows'] && $field['cols']) {
-    $rows = trim($field['rows']);
-    $cols = trim($field['cols']);  
-    $rows = explode("\n", $rows);
-    $cols = explode("\n", $cols);
+//  if (!($field['rows'] && $field['cols'])) {
+//    return;
+//  }
+  $rows = (array)unserialize($field['rows_data']);
+  $cols = (array)unserialize($field['cols_data']);
+  
+  //generate column headers
+  $header[] = ''; //first must be blank
+  foreach ($cols as $col) {
+    $header[] = $col['#title'];
   }
-
+  
+  //generate first column
+  foreach ($rows as $row) {
+    $first_col[] = $row['#title'];
+  }
+  
   $processed_element = array(
     '#tree' => TRUE,
     '#weight' => $field['widget']['weight'],
@@ -222,39 +597,51 @@ function matrix_process($element, $edit, $form_state, $form) {
     '#parents' => $element['#parents'],
     '#title' => $element['#title'],
     '#description' => $element['#description'],
-    '#required' => $element['#required'],
     '#field_name' => $element['#field_name'],
     '#type_name' => $element['#type_name'],
     '#delta' => $element['#delta'],
     '#columns' => $element['#columns'],
+    '#header' => $header,
+    '#first_col' => $first_col,
   );
-      
-  if ($cols) {
-    $header = array_merge(array(''), $cols);
-  }
+/*echo 'edit:';
+  print_r($edit);
+echo 'element';
+print_r($element);
+echo 'field';
+print_r($field);
+*/
+print_r($element);
 
-  $first_col = $rows;
-  $rows = (array)$rows;
-  $i=0;
-  foreach ($rows as $row) {
-    if ($row) {
-      $j=0;
-      foreach ($cols as $col) {
-        if ($col) {        
-          $processed_element[$i][$j] = array(
-            '#type' => 'textfield',
-            '#size' => $field['size'],
-            '#default_value' => isset($edit[$i][$j]) ? $edit[$i][$j] : $element['#default_value'][$i][$j],
-          );
-          $j++;
-        }
+$default_values = $element['#value'];
+
+  //build out the appropriate form element
+  foreach ($rows as $row_id => $row) {
+    foreach ($cols as $col_id => $col) {  
+
+  echo "set".$edit[$row_id][$col_id].'<br>';
+
+      if ($row['#dominant'] == TRUE) {
+        $processed_element[$row_id][$col_id] = array(
+          '#type' => $row['#type'],
+          '#size' => $row['#size'],
+          '#required' => $row['#required'],
+          '#options' => $row['#options'], //need some extra processing somewhere
+          '#default_value' => isset($element['#value'][$row_id][$col_id]) ? $element['#value'][$row_id][$col_id] : $element['#default_value'][$row_id][$col_id],
+        );
       }
-      $i++;
+      else {
+        $processed_element[$row_id][$col_id] = array(
+          '#type' => $col['#type'],
+          '#size' => $col['#size'],
+          '#required' => $col['#required'],
+          '#options' => $col['#options'], //need some extra processing somewhere
+          '#default_value' => isset($element['#value'][$row_id][$col_id]) ? $element['#value'][$row_id][$col_id] : $element['#default_value'][$row_id][$col_id],
+        );
+      }
     }
   }
-
-  $processed_element['header'] = array('#value' => $header);
-  $processed_element['first_col'] = array('#value' => $first_col);
+//  print_r($processed_element);
   return $processed_element;
 }
 
@@ -264,7 +651,7 @@ function matrix_process($element, $edit, $form_state, $form) {
 function matrix_field_formatter_info() {
   return array(
     'default' => array(
-      'label' => t('Data grid (default)'),
+      'label' => t('Title, as matrix (default)'),
       'field types' => array('matrix'),
     ),
   );
@@ -279,15 +666,25 @@ function matrix_field_formatter_info() {
  */
 function theme_matrix_formatter_default($element) {
   $field_info = $element['#node']->$element['#field_name'];
-  if (!is_array($field_info['cols_header']) || !is_array($field_info['data'])) {
+  $rows_data = unserialize($field_info['rows_data']);
+  $cols_data = unserialize($field_info['cols_data']);
+  
+  //if there is no data, just return
+  if (!is_array($rows_data) || !is_array($cols_data)) {
     return;
   }
+  $header = array('');
+  foreach($rows_data as $id => $e) {
+    $rows_header[] = $e['#title'];
+  }
 
-  $header = $field_info['cols_header'];
-  array_unshift($header, '');
-
-  static $rendered; //since we are rendering the whole thing in one go, we don't want to rerender for each fow
-
+  foreach($cols_data as $id => $e) {
+    $header[] = $e['#title'];
+  }
+ // print_r($field_info['data']);
+ // die();
+//  static $rendered; //since we are rendering the whole thing in one go, we don't want to rerender for each fow
+//print_r($element);
   if ($rendered[$element['#field_name']] != TRUE) {
     $rendered[$element['#field_name']] = TRUE;
     //replace blank cells with a dash
@@ -303,10 +700,9 @@ function theme_matrix_formatter_default($element) {
           $show_row = $row_index;
         }
       }
-      $row_label =  '<b>'. array_shift($field_info['rows_header']) .'</b>';
+      $row_label =  '<b>'. array_shift($rows_header) .'</b>';
       array_unshift($data[$row_index], $row_label); 
     }
-
     //add blank cells if the number of rows/columns is different to the number of headers
     //this can happen when columns/rows are added to an existing content type
     $row_count = count($data[0]);
@@ -317,16 +713,21 @@ function theme_matrix_formatter_default($element) {
         }
       }
     }
-     
+
     //strip out rows at the end of the dataset where there is no data
     foreach ($data as $row_id => $row) {
       if ($row_id <= $show_row) {
         $flushed_data[] = $row;
       }
     }
+
+    $output = theme('table', $header, $flushed_data);
+    if (user_access('export matrix')) {
+      $output .= l('Export data', 'matrix/export/'. $element['#node']->nid .'/'. $element['#field_name']);
+    }
     
-    return theme('table', $header, $flushed_data);
   }
+  return $output;
 }
 
 /**
@@ -334,9 +735,39 @@ function theme_matrix_formatter_default($element) {
  *
  * Disable the multiple values settings.  This module won't work with them.
  */
-function matrix_form_alter(&$form, $form_state, $form_id) {
+function matrix_form_alter(&$node, $op, $a3 = NULL, $a4 = NULL) {  
   if ($form_id == 'content_field_edit_form' && $form['#field']['type'] == 'matrix') {
     $form['field']['multiple']['#type'] = 'hidden'; //hide the multiple values form.  It does not work with this module!
+    $form['field']['required']['#type'] = 'hidden'; //Required is implemented on a per-field basis
   }
 }
 
+/**
+ * Menu callback for the export link on matrix fields
+ *
+ * @param string $nid the Node ID
+ * @param string $field_name the name of the field on the node
+ * @return csv file with download headers
+ */
+function matrix_export($nid, $field_name) {
+  if (is_numeric($nid)) {
+    $node = node_load($nid);
+    $field = $node->$field_name;
+    foreach ($field['cols_header'] as $index => $value) {
+      $field['cols_header'][$index] = trim($value);
+    }
+    array_unshift($field['cols_header'], '');
+    $output .= '"'. implode('", "', $field['cols_header']). "\"\n";
+    
+    $i=0;
+    foreach ($field['data'] as $row) {
+      $output .= '"'. trim($field['rows_header'][$i]) .'", "'. implode('", "', $row). "\"\n";
+      $i++;
+    }
+    header('Content-type: text/csv');
+    header('Content-Disposition: attachment; filename="'.$nid .'-'. $field_name .'.csv"');
+
+    echo $output;
+    die();
+  }
+}
