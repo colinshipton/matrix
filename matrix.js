@@ -3,6 +3,7 @@
  */
 $().ready(function() { 
     $('#edit-add-rows, #edit-add-cols, .matrix-settings-edit a').bind('click', matrix_element_form); //bind events to clicks on the edit button and on the add button
+    //Drupal.theme.prototype.tableDragChangedWarning = function () {return '';}; //unset the "changes will be saved" message
 });
 
 /**
@@ -37,6 +38,7 @@ function matrix_element_form (e) {
           $('#edit-'+ rc +'-data').val(res.data); //this is the serialized data which will eventually go back to the database
           $('#matrix-'+ rc +'-throbber').html(''); //remove the form elements
           $('.matrix-settings-edit a').bind('click', matrix_element_form); //rebind click events on th edit buttons
+          Drupal.attachBehaviors('#edit-'+ rc +'-list'); //attach drupal events such as dragtable
         });
       return false; //this prevents the save button from reloading the form
     });
@@ -63,6 +65,7 @@ function matrix_element_form (e) {
               $('#edit-'+ rc +'-list').html(res.list); //this is the list of elements
               $('#edit-'+ rc +'-data').val(res.data); //this is the serialized data which will eventually go back to the database
               $('.matrix-settings-edit a').bind('click', matrix_element_form); //rebind events
+              Drupal.attachBehaviors('#edit-'+ rc +'-list'); //reattach drupal originating events
               $('#matrix-'+ rc +'-throbber').html('Component deleted'); //remove the form elements
             });
           return false; //this prevents the delete confirmation button from reloading the form
@@ -96,4 +99,48 @@ function matrix_find_rc(that) {
       return class_parts[1];
     }
   }
+}
+
+/**
+ * Move a block in the blocks table from one region to another via select list.
+ *
+ * This behavior is dependent on the tableDrag behavior, since it uses the
+ * objects initialized in that behavior to update the row.
+ */
+Drupal.behaviors.blockDrag = function(context) {
+  var rowsTableDrag = Drupal.tableDrag.matrixrows;
+  var colsTableDrag = Drupal.tableDrag.matrixcols;
+
+  rowsTableDrag.onDrop = function() {
+    dragObject = this;
+    rc = 'rows';
+    var orderField = $('div.matrix-settings-rows-order', dragObject.rowObject.element);
+    matrix_dragTable(orderField, rc);
+  };
+  
+  colsTableDrag.onDrop = function() {
+    dragObject = this;
+    var orderField = $('div.matrix-settings-cols-order', dragObject.rowObject.element);
+    matrix_dragTable(orderField, rc);
+  };
+};
+
+/**
+ *
+ *
+ *
+ */
+function matrix_dragTable(orderField, rc) {
+  jQuery.getJSON(Drupal.settings.basePath + "matrix/reorder", //call the save callback
+        {'rc': rc, //rows or columns
+         'field_name': $('#edit-field-name').val(), //CCK field name
+         'source': orderField[0].id,
+         'destination': orderField[0].value
+        },
+        function(res) { //after the element is saved rebuild the list of elements and the data form element
+          $('#edit-'+ rc +'-list').html(res.list); //this is the list of elements
+          $('#edit-'+ rc +'-data').val(res.data); //this is the serialized data which will eventually go back to the database
+          $('.matrix-settings-edit a').bind('click', matrix_element_form); //rebind click events on th edit buttons
+          Drupal.attachBehaviors('#edit-'+ rc +'-list'); //reattach drupal based events
+        });
 }

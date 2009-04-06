@@ -17,6 +17,12 @@ function matrix_menu() {
     'access arguments' => array('export matrix'),
     'type' => MENU_CALLBACK,
   );
+  $items['matrix/reorder'] = array(
+    'title' => 'Menu callback for saving the reorder of elements events',
+    'page callback' => 'matrix_settings_reorder_save',
+    'access arguments' => array('export matrix'),
+    'type' => MENU_CALLBACK,
+  );
   $items['matrix/throbber'] = array(
     'title' => 'Menu callback for the settings form',
     'page callback' => 'matrix_settings_throbber_callback',
@@ -97,11 +103,7 @@ function matrix_field_settings($op, $field) {
         '#value' => '<div id="matrix-cols-throbber"></div>',
       );
       $form['cols']['cols_data'] = array(
-        '#type' => 'textarea', //this will become hidden
-        '#title' => t('Headers in Column'),
-        '#description' => t('List down left side headers. One per line.') .'<br />',
-        '#cols' => 60,
-        '#rows' => 5,
+        '#type' => 'hidden',
         '#default_value' => matrix_settings_default('data', $field['field_name'], 'cols', $field['cols_data']),
       );
 
@@ -125,11 +127,7 @@ function matrix_field_settings($op, $field) {
         '#value' => '<div id="matrix-rows-throbber"></div>',
       );
       $form['rows']['rows_data'] = array(
-        '#type' => 'textarea', //this will become hidden
-        '#title' => t('Headers in Row'),
-        '#description' => t('List down left side headers. One per line.') .'<br />',
-        '#cols' => 60,
-        '#rows' => 5,
+        '#type' => 'hidden',
         '#default_value' => matrix_settings_default('data', $field['field_name'], 'rows', $field['rows_data']),
       );
       return $form;
@@ -151,32 +149,85 @@ function matrix_field_settings($op, $field) {
  * @param array $data The definition to process
  * @return HTML markup
  */
-function matrix_settings_list($elements, $rc) {
-  $header = array(t('Title'), t('Type'), t('Edit'));
+function theme_matrix_settings_list($elements, $rc) {
+  // Add table javascript.
+  drupal_add_js('misc/tableheader.js');
+  drupal_add_tabledrag("matrix$rc", 'order', 'sibling', "matrix-settings-$rc-order");
+
+  $header = array(t('Title'), t('Type'), t('Edit'), t('Order'));
   if (!is_array($elements)) {
     return;
   }
   foreach ($elements as $id => $element) {
-    $rows[] = array($element['#title'],
+    $data = array(  $element['#title'],
                     $element['#type'],
-                    "<div class='matrix-settings-edit'><a href='#' id='matrix-element-$rc-$id' class='matrix-$rc'>Edit</a></div>"
-                    );
+                    "<a href='#' id='matrix-element-$rc-$id' class='matrix-$rc'>Edit</a>",
+                    "<div id='$id' class='matrix-settings-$rc-order'>$id</div>",
+                  );
+  
+    $rows[] = array(
+      'data' => $data,
+      'class' => 'draggable',
+    );
   }
-  $output .= theme('table', $header, $rows);
+  $output .= theme('table', $header, $rows, array('id' => "matrix$rc"));
   return $output;
 }
-
 
 function matrix_settings_default($item, $field_name, $rc, $field_data) {
   $elements = unserialize($field_data);
   
   if ($item == 'list') {
-    $list = matrix_settings_list($elements, $rc);
+    $list = theme('matrix_settings_list', $elements, $rc);
     return !empty($list) ? $list : t('please add an element');
   }
   elseif ($item == 'data') {
     return serialize($elements);
   }
+}
+
+/**
+ *
+ *
+ */
+function matrix_settings_reorder_save(){
+  $field_name = $_REQUEST['field_name'];
+  $source = $_REQUEST['source'];
+  $destination = $_REQUEST['destination'];
+  $rc = $_REQUEST['rc'];
+  $cache_response = cache_get('matrix-'. $rc .'-' .$field_name); //load existing elements from cache
+  
+  $elements = (array)$cache_response->data;
+  
+  $move_element = $elements[$source];
+  
+  foreach ($elements as $id => $element) {
+    if ($source < $destination) {
+      if ($id != $source) {
+        $fixed_elements[] = $element;
+      }
+      if ($id == $destination) {
+        $fixed_elements[] = $move_element;
+      }
+    }
+    else {
+      if ($id == $destination) {
+        $fixed_elements[] = $move_element;
+      }
+      if ($id != $source) {
+        $fixed_elements[] = $element;
+      }
+    }
+  }
+  
+  $elements = array_values($fixed_elements); //this rekeys the array so it remains sequential.
+  
+  cache_set('matrix-'. $rc .'-'. $field_name, $elements); //save all elements back to the cache
+  
+  $list .= theme('matrix_settings_list', $elements, $rc);
+  
+  echo drupal_to_js(array('list' => $list, 'data' => serialize($elements)));
+  exit();
 }
 
 /**
@@ -226,7 +277,7 @@ function matrix_settings_throbber_save() {
   
   cache_set('matrix-'. $rc .'-'. $field_name, $elements); //save all elements back to the cache
   
-  $list .= matrix_settings_list($elements, $rc);
+  $list .= theme('matrix_settings_list', $elements, $rc);
   
   echo drupal_to_js(array('list' => $list, 'data' => serialize($elements)));
   exit();
@@ -250,7 +301,7 @@ function matrix_settings_throbber_delete() {
     unset($elements[$element_id]);
     cache_set('matrix-'. $rc .'-'. $field_name, $elements); //save all elements back to the cache
     
-    $list .= matrix_settings_list($elements, $rc);
+    $list .= theme('matrix_settings_list', $elements, $rc);
     echo drupal_to_js(array('list' => $list, 'data' => serialize($elements)));
     exit();
   }
@@ -523,6 +574,10 @@ function matrix_theme() {
     ),
     'matrix_table_form' => array(
       'arguments' => array('form' => NULL),
+    ),
+    'matrix_settings_list' => array(
+      'arguments' => array($elements, $rc),
+    //  'template' => 'matrix-configure',
     ),
   );
 }
@@ -835,3 +890,5 @@ function matrix_export($nid, $field_name) {
     die();
   }
 }
+
+
