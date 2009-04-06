@@ -2,7 +2,7 @@
  * When the DOM is loaded, attach click handlers to the add and edit buttons
  */
 $().ready(function() { 
-    $('#edit-add-rows, #edit-add-cols, .matrix-settings-edit a').bind('click', matrix_element_form); //bind events to clicks on the edit button and on the add button
+    $('#edit-add-rows, #edit-add-cols, a.matrix-settings-edit').bind('click', matrix_element_form); //bind events to clicks on the edit button and on the add button
     //Drupal.theme.prototype.tableDragChangedWarning = function () {return '';}; //unset the "changes will be saved" message
 });
 
@@ -37,7 +37,7 @@ function matrix_element_form (e) {
           $('#edit-'+ rc +'-list').html(res.list); //this is the list of elements
           $('#edit-'+ rc +'-data').val(res.data); //this is the serialized data which will eventually go back to the database
           $('#matrix-'+ rc +'-throbber').html(''); //remove the form elements
-          $('.matrix-settings-edit a').bind('click', matrix_element_form); //rebind click events on th edit buttons
+          $('a.matrix-settings-edit').bind('click', matrix_element_form); //rebind click events on th edit buttons
           Drupal.attachBehaviors('#edit-'+ rc +'-list'); //attach drupal events such as dragtable
         });
       return false; //this prevents the save button from reloading the form
@@ -64,7 +64,7 @@ function matrix_element_form (e) {
             function(res){ //delete the element
               $('#edit-'+ rc +'-list').html(res.list); //this is the list of elements
               $('#edit-'+ rc +'-data').val(res.data); //this is the serialized data which will eventually go back to the database
-              $('.matrix-settings-edit a').bind('click', matrix_element_form); //rebind events
+              $('a.matrix-settings-edit').bind('click', matrix_element_form); //rebind events
               Drupal.attachBehaviors('#edit-'+ rc +'-list'); //reattach drupal originating events
               $('#matrix-'+ rc +'-throbber').html('Component deleted'); //remove the form elements
             });
@@ -140,7 +140,7 @@ function matrix_dragTable(orderField, rc) {
         function(res) { //after the element is saved rebuild the list of elements and the data form element
           $('#edit-'+ rc +'-list').html(res.list); //this is the list of elements
           $('#edit-'+ rc +'-data').val(res.data); //this is the serialized data which will eventually go back to the database
-          $('.matrix-settings-edit a').bind('click', matrix_element_form); //rebind click events on th edit buttons
+          $('a.matrix-settings-edit').bind('click', matrix_element_form); //rebind click events on th edit buttons
           Drupal.attachBehaviors('#edit-'+ rc +'-list'); //reattach drupal based events
         });
 }

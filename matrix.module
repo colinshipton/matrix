@@ -161,7 +161,7 @@ function theme_matrix_settings_list($elements, $rc) {
   foreach ($elements as $id => $element) {
     $data = array(  $element['#title'],
                     $element['#type'],
-                    "<a href='#' id='matrix-element-$rc-$id' class='matrix-$rc'>Edit</a>",
+                    "<a href='#' id='matrix-element-$rc-$id' class='matrix-$rc matrix-settings-edit'>Edit</a>",
                     "<div id='$id' class='matrix-settings-$rc-order'>$id</div>",
                   );
   
