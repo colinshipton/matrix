@@ -187,22 +187,14 @@ function matrix_field_settings($op, $field) {
  * @return $form_element
  */
 function matrix_settings_preview($field_name, $rows_data, $cols_data) {
-  $form['preview'] = array(
-    '#parents' => 0,
+  $form['matrix_preview'] = array(
+    '#type' => 'matrix',
     '#title' => t('Preview'),
     '#description' => t('Preview of the matrix field'),
-    '#field_name' => 'preview',
-    '#type' => 'type',
-    '#type_name' => 'matrix',
-    '#delta' => 0,
-    '#columns' => 0,
+    '#rows_data' =>  $rows_data, 
+    '#cols_data' =>  $cols_data, 
+    '#mode' => 'rows',
   );
-  $form['fas'] = array(
-    '#type' => 'textfield',
-    '#title' => 'dfasf',
-  );  
-  $form['#field_info']['preview']['rows_data'] = 'a:6:{i:0;a:6:{s:5:"#type";s:5:"title";s:6:"#title";s:4:"Text";s:8:"#options";N;s:5:"#size";s:0:"";s:9:"#required";i:0;s:8:"#initial";i:0;}i:1;a:7:{s:5:"#type";s:9:"textfield";s:6:"#title";s:3:"One";s:8:"#options";N;s:5:"#size";s:0:"";s:9:"#dominant";i:1;s:9:"#required";i:1;s:8:"#initial";i:0;}i:2;a:7:{s:5:"#type";s:8:"checkbox";s:6:"#title";s:5:"Three";s:8:"#options";N;s:5:"#size";s:0:"";s:9:"#dominant";i:1;s:9:"#required";i:0;s:8:"#initial";i:0;}i:3;a:7:{s:5:"#type";s:6:"select";s:6:"#title";s:3:"Two";s:8:"#options";a:6:{s:1:"q";s:1:"q";s:1:"w";s:1:"w";s:1:"e";s:1:"e";s:1:"r";s:1:"r";s:1:"t";s:1:"t";s:1:"y";s:1:"y";}s:5:"#size";s:0:"";s:9:"#dominant";i:1;s:9:"#required";i:0;s:8:"#initial";i:0;}i:4;a:7:{s:5:"#type";s:11:"calculation";s:6:"#title";s:1:"S";s:8:"#options";N;s:5:"#size";s:0:"";s:9:"#required";i:0;s:8:"#initial";i:0;s:12:"#calc_method";s:7:"average";}i:5;a:7:{s:5:"#type";s:6:"radios";s:6:"#title";s:5:"Radio";s:8:"#options";a:3:{s:1:"z";s:1:"z";s:1:"x";s:1:"x";s:1:"c";s:1:"c";}s:5:"#size";s:0:"";s:9:"#dominant";i:1;s:9:"#required";i:0;s:8:"#initial";i:0;}}';
-  $form['#field_info']['preview']['cols_data'] = 'a:2:{i:0;a:7:{s:5:"#type";s:9:"textfield";s:6:"#title";s:7:"Nothing";s:8:"#options";N;s:5:"#size";s:0:"";s:9:"#dominant";i:0;s:9:"#required";i:0;s:8:"#initial";i:0;}i:1;a:7:{s:5:"#type";s:6:"select";s:6:"#title";s:9:"Something";s:8:"#options";a:4:{s:3:"One";s:3:"One";s:3:"Two";s:3:"Two";s:5:"Three";s:5:"Three";s:4:"Four";s:4:"Four";}s:5:"#size";s:0:"";s:9:"#dominant";i:0;s:9:"#required";i:0;s:8:"#initial";i:0;}}';
   return drupal_render($form);
 }
 
@@ -324,7 +316,9 @@ function matrix_theme() {
     ),
     'matrix_settings_list' => array(
       'arguments' => array($elements, $rc),
-    //  'template' => 'matrix-configure',
+    ),
+    'matrix' => array(
+       'arguments' => array('element' => NULL)
     ),
   );
 }
@@ -360,10 +354,18 @@ function theme_matrix_table_form($form) {
 function matrix_elements() {
   $elements['matrix'] =  array(
     '#input' => TRUE,
-    '#columns' => array('data'),
     '#process' => array('matrix_process'),
+    '#element_validate' => array('matrix_validate'),
   );
   return $elements;
+}
+
+/**
+ * Theme for the field
+ */
+function theme_matrix($element) {
+  //$value = drupal_render($element);
+  return theme('form_element', $element, $value);
 }
 
 /**
@@ -372,55 +374,61 @@ function matrix_elements() {
  * Build the form element. When creating a form using FAPI #process,
  * note that $element['#value'] is already set.
  *
- * The $fields array is in $form['#field_info'][$element['#field_name']].
+ * For CCK, $fields array is in $form['#field_info'][$element['#field_name']].
  */
 function matrix_process($element, $edit, $form_state, $form) {
+  //as this element can be used by non-cck modules, data needs to be optionally retrieved directly from the form element
   $field = $form['#field_info'][$element['#field_name']];
-  $rows = (array)unserialize($field['rows_data']);
-  $cols = (array)unserialize($field['cols_data']);
-
+  //print_r($field);
+  if ($field) {
+    $rows = (array)unserialize($field['rows_data']);
+    $cols = (array)unserialize($field['cols_data']);
+    $mode = $field['mode'];
+  }
+  else {
+    $rows = (array)$element['rows_data'];
+    $cols = (array)$element['cols_data'];
+    $mode = $element['mode'];
+  }
   //generate column headers
   $header[] = ''; //first must be blank
   foreach ($cols as $col) {
-    $header[] = $col['#title'];
+    if ($col['#required'] == TRUE) {
+      $header[] = $col['#title'] . '<span class="form-required" title="This field is required.">*</span>';
+    }
+    else {
+      $header[] = $col['#title'];
+    }
   }
   
   //generate first column
   foreach ($rows as $row) {
-    $first_col[] = $row['#title'];
+    if ($row['#required'] == TRUE) {
+      $first_col[] = $row['#title'] .'<span class="form-required" title="This field is required.">*</span>';
+    }
+    else {
+      $first_col[] = $row['#title'];
+    }
   }
   
   $processed_element = array(
     '#tree' => TRUE,
-    '#weight' => $field['widget']['weight'],
     '#theme' => 'matrix_table_form', 
-    '#prefix' => '<div class="form-item matrix_field">',
-    '#suffix' => '</div>',
     '#parents' => $element['#parents'],
     '#title' => $element['#title'],
     '#description' => $element['#description'],
     '#field_name' => $element['#field_name'],
     '#type_name' => $element['#type_name'],
     '#delta' => $element['#delta'],
-    '#columns' => $element['#columns'],
-    //'#header' => $header,
-    //'#first_col' => $first_col,
+    '#header' => $header,
+    '#first_col' => $first_col
   );
-/*echo 'edit:';
-  print_r($edit);
-echo 'element';
-print_r($element);
-echo 'field';
-print_r($field);
-*/
-//print_r($element);
 
   //build out the appropriate form element
   foreach ($rows as $row_id => $row) {
     foreach ($cols as $col_id => $col) {  
-      // echo "set".$edit[$row_id][$col_id].'<br>';
       $default = isset($element['#value'][$row_id][$col_id]) ? $element['#value'][$row_id][$col_id] : $element['#default_value'][$row_id][$col_id];
-      if ($field['mode'] == 'rows') {
+      if ($mode == 'rows') {
         $processed_element[$row_id][$col_id] = _matrix_process($row, $default);
       }
       else {
@@ -428,7 +436,7 @@ print_r($field);
       }
     }
   }
-  //print_r($processed_element);
+  
   return $processed_element;
 }
 
@@ -477,6 +485,15 @@ function _matrix_process($element, $default) {
         '#value' => '',
       );
   }
+}
+
+/**
+ * Validation callback
+ * This is mostly to check that custom fields are filled in.
+ */
+function matrix_validate($element, &$form_state) {
+  form_error($element, t('The number must be more than 10.'));
+  return $element;
 }
 
 /**
