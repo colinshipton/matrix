@@ -13,9 +13,10 @@ $().ready(function() {
 function matrix_element_form (e) {
   rc = matrix_find_rc(this); //work out if we are dealing with rows or columns (rc)
   mode = $("input[name='mode']:checked").val();
+  element_id = (this.id.split('-')[3]) ? this.id.split('-')[3] : $("#edit-element-id").val();
 
   //$('#matrix-'+ rc +'-throbber').html(''); //remove the form elements
-  $('#matrix-'+ rc +'-throbber').load(Drupal.settings.basePath + "matrix/throbber", {'mode': mode,'rc': rc, 'element_type': $('.matrix-'+ rc +'#edit-element-type').val(), 'element_id': this.id.split('-')[3], 'field_name': $('#edit-field-name').val()}, function() { //retrieve the element form
+  $('#matrix-'+ rc +'-throbber').load(Drupal.settings.basePath + "matrix/throbber", {'mode': mode,'rc': rc, 'element_type': $('.matrix-'+ rc +'#edit-element-type').val(), 'element_id': element_id, 'field_name': $('#edit-field-name').val()}, function() { //retrieve the element form
     $('.matrix-'+ rc +'#edit-element-type').bind('change', matrix_element_form); //bind the change event to the element-type select box - This will trigger the AJAX call to populate the rest of the fom
     
     $('#edit-save').click(function(){ //when the save button is clicked

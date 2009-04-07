@@ -21,27 +21,52 @@ function matrix_menu() {
     'title' => 'Menu callback for saving the reorder of elements events',
     'page callback' => 'matrix_settings_reorder_save',
     'access arguments' => array('export matrix'),
+    'file' => 'admin.inc',
     'type' => MENU_CALLBACK,
   );
   $items['matrix/throbber'] = array(
     'title' => 'Menu callback for the settings form',
     'page callback' => 'matrix_settings_throbber_callback',
     'access arguments' => array('export matrix'),
+    'file' => 'admin.inc',
     'type' => MENU_CALLBACK,
   );
   $items['matrix/throbber/save'] = array(
     'title' => 'Menu callback saving a new element',
     'page callback' => 'matrix_settings_throbber_save',
     'access arguments' => array('export matrix'),
+    'file' => 'admin.inc',
     'type' => MENU_CALLBACK,
   );
   $items['matrix/throbber/delete'] = array(
     'title' => 'Menu callback deleting an element',
     'page callback' => 'matrix_settings_throbber_delete',
     'access arguments' => array('export matrix'),
+    'file' => 'admin.inc',
     'type' => MENU_CALLBACK,
   );
   return $items;
+}
+
+/**
+ * Prepare default values for the admin interface
+ * @param $item string either "list" (the visible part) or "data" (the hidden elememt part)
+ * @param $field_name string the name of the CCK field
+ * @param $rc string either "rows" or "cols"
+ * @param $field_data the field data
+ *
+ * @return Either the formatted list of elements or serialized elements
+ */
+function matrix_settings_default($item, $field_name, $rc, $field_data) {
+  $elements = unserialize($field_data);
+  
+  if ($item == 'list') {
+    $list = theme('matrix_settings_list', $elements, $rc);
+    return !empty($list) ? $list : t('please add an element');
+  }
+  elseif ($item == 'data') {
+    return $field_data;
+  }
 }
 
 /**
@@ -130,6 +155,17 @@ function matrix_field_settings($op, $field) {
         '#type' => 'hidden',
         '#default_value' => matrix_settings_default('data', $field['field_name'], 'rows', $field['rows_data']),
       );
+
+      $form['preview'] = array(
+        '#type' => 'fieldset',
+        '#title' => 'Preview',
+      );
+      $form['preview']['container'] = array(
+        '#type' => 'markup',
+        '#value' => matrix_settings_preview($field['field_name'], $field['rows_data'], $field['cols_data']),
+        '#prefix' => '<div id="matrix-preview">',
+        '#suffix' => '</div>',
+      );
       return $form;
       
     case 'save':
@@ -140,6 +176,34 @@ function matrix_field_settings($op, $field) {
       $values[] = 'cols_data';
       return $values;
   }
+}
+
+/**
+ * Build a preview of the element
+ * @param $field_name string The  name of the CCK field
+ * @param $rows_data string Serialized array of rows data
+ * @param $cols_data string Serialized array of cols data
+ *
+ * @return $form_element
+ */
+function matrix_settings_preview($field_name, $rows_data, $cols_data) {
+  $form['preview'] = array(
+    '#parents' => 0,
+    '#title' => t('Preview'),
+    '#description' => t('Preview of the matrix field'),
+    '#field_name' => 'preview',
+    '#type' => 'type',
+    '#type_name' => 'matrix',
+    '#delta' => 0,
+    '#columns' => 0,
+  );
+  $form['fas'] = array(
+    '#type' => 'textfield',
+    '#title' => 'dfasf',
+  );  
+  $form['#field_info']['preview']['rows_data'] = 'a:6:{i:0;a:6:{s:5:"#type";s:5:"title";s:6:"#title";s:4:"Text";s:8:"#options";N;s:5:"#size";s:0:"";s:9:"#required";i:0;s:8:"#initial";i:0;}i:1;a:7:{s:5:"#type";s:9:"textfield";s:6:"#title";s:3:"One";s:8:"#options";N;s:5:"#size";s:0:"";s:9:"#dominant";i:1;s:9:"#required";i:1;s:8:"#initial";i:0;}i:2;a:7:{s:5:"#type";s:8:"checkbox";s:6:"#title";s:5:"Three";s:8:"#options";N;s:5:"#size";s:0:"";s:9:"#dominant";i:1;s:9:"#required";i:0;s:8:"#initial";i:0;}i:3;a:7:{s:5:"#type";s:6:"select";s:6:"#title";s:3:"Two";s:8:"#options";a:6:{s:1:"q";s:1:"q";s:1:"w";s:1:"w";s:1:"e";s:1:"e";s:1:"r";s:1:"r";s:1:"t";s:1:"t";s:1:"y";s:1:"y";}s:5:"#size";s:0:"";s:9:"#dominant";i:1;s:9:"#required";i:0;s:8:"#initial";i:0;}i:4;a:7:{s:5:"#type";s:11:"calculation";s:6:"#title";s:1:"S";s:8:"#options";N;s:5:"#size";s:0:"";s:9:"#required";i:0;s:8:"#initial";i:0;s:12:"#calc_method";s:7:"average";}i:5;a:7:{s:5:"#type";s:6:"radios";s:6:"#title";s:5:"Radio";s:8:"#options";a:3:{s:1:"z";s:1:"z";s:1:"x";s:1:"x";s:1:"c";s:1:"c";}s:5:"#size";s:0:"";s:9:"#dominant";i:1;s:9:"#required";i:0;s:8:"#initial";i:0;}}';
+  $form['#field_info']['preview']['cols_data'] = 'a:2:{i:0;a:7:{s:5:"#type";s:9:"textfield";s:6:"#title";s:7:"Nothing";s:8:"#options";N;s:5:"#size";s:0:"";s:9:"#dominant";i:0;s:9:"#required";i:0;s:8:"#initial";i:0;}i:1;a:7:{s:5:"#type";s:6:"select";s:6:"#title";s:9:"Something";s:8:"#options";a:4:{s:3:"One";s:3:"One";s:3:"Two";s:3:"Two";s:5:"Three";s:5:"Three";s:4:"Four";s:4:"Four";}s:5:"#size";s:0:"";s:9:"#dominant";i:0;s:9:"#required";i:0;s:8:"#initial";i:0;}}';
+  return drupal_render($form);
 }
 
 /**
@@ -174,323 +238,6 @@ function theme_matrix_settings_list($elements, $rc) {
   return $output;
 }
 
-function matrix_settings_default($item, $field_name, $rc, $field_data) {
-  $elements = unserialize($field_data);
-  
-  if ($item == 'list') {
-    $list = theme('matrix_settings_list', $elements, $rc);
-    return !empty($list) ? $list : t('please add an element');
-  }
-  elseif ($item == 'data') {
-    return serialize($elements);
-  }
-}
-
-/**
- *
- *
- */
-function matrix_settings_reorder_save(){
-  $field_name = $_REQUEST['field_name'];
-  $source = $_REQUEST['source'];
-  $destination = $_REQUEST['destination'];
-  $rc = $_REQUEST['rc'];
-  $cache_response = cache_get('matrix-'. $rc .'-' .$field_name); //load existing elements from cache
-  
-  $elements = (array)$cache_response->data;
-  
-  $move_element = $elements[$source];
-  
-  foreach ($elements as $id => $element) {
-    if ($source < $destination) {
-      if ($id != $source) {
-        $fixed_elements[] = $element;
-      }
-      if ($id == $destination) {
-        $fixed_elements[] = $move_element;
-      }
-    }
-    else {
-      if ($id == $destination) {
-        $fixed_elements[] = $move_element;
-      }
-      if ($id != $source) {
-        $fixed_elements[] = $element;
-      }
-    }
-  }
-  
-  $elements = array_values($fixed_elements); //this rekeys the array so it remains sequential.
-  
-  cache_set('matrix-'. $rc .'-'. $field_name, $elements); //save all elements back to the cache
-  
-  $list .= theme('matrix_settings_list', $elements, $rc);
-  
-  echo drupal_to_js(array('list' => $list, 'data' => serialize($elements)));
-  exit();
-}
-
-/**
- * AJAX callback for saving an individual element
- * Takes parameters from $_REQUEST
- * Saves the data into the Drupal cache
- * Echos JSON data which contains:
- *  serialized data (which is what will be eventually saved into the database)
- *  list of elements for row/column
- */
-function matrix_settings_throbber_save() {
-  $field_name = $_REQUEST['field_name'];
-  $element_id = (int)$_REQUEST['element_id'];
-  $rc = $_REQUEST['rc'];
-  $cache_response = cache_get('matrix-'. $rc .'-' .$field_name); //load existing elements from cache
-  
-  $elements = (array)$cache_response->data;
-  
-  //process the options
-  if ($_REQUEST['options'] != 'undefined') {
-    $exploded_options = explode("\n", $_REQUEST['options']);
-    foreach ($exploded_options as $o) {
-      list($key, $value) = explode('|', $o);
-      $key = trim($key);
-      $value = isset($value) ? trim($value) : $key;
-      if ($key != '') {
-        $options[$key] = $value;
-      }
-    }
-  } 
-  //build the new element
-  $data['#type'] = $_REQUEST['element_type'];
-  $data['#title'] = $_REQUEST['title'];
-  $data['#options'] = $options;
-  $data['#size'] = $_REQUEST['size'] != 'undefined' ? $_REQUEST['size'] : '';
-  $data['#required'] = ($_REQUEST['required'] == 'true') ? 1 : 0;
-  $data['#initial'] = ($_REQUEST['initial'] == 'true') ? 1 : 0;
-  $data['#calc_method'] = $_REQUEST['calc_method'];
-  
-  if ($element_id != '') {
-    $elements[$element_id] = $data;
-  }
-  else {
-    $elements[] = $data;
-  }
-  $elements = array_values($elements); //this rekeys the array so it remains sequential.
-  
-  cache_set('matrix-'. $rc .'-'. $field_name, $elements); //save all elements back to the cache
-  
-  $list .= theme('matrix_settings_list', $elements, $rc);
-  
-  echo drupal_to_js(array('list' => $list, 'data' => serialize($elements)));
-  exit();
-}
-
-/**
- * Menu callback to delete an element
- * This is part one of the delete process.
- * Accepts parameters via $_REQUEST
- * Echos a delete confirm form.
- */
-function matrix_settings_throbber_delete() {
-  $field_name = $_REQUEST['field_name'];
-  $element_id = $_REQUEST['element_id'];
-  $confirm = $_REQUEST['confirm'];
-  $rc = $_REQUEST['rc'];
-  $cache_response = cache_get('matrix-'. $rc .'-'. $field_name); //load existing elements from cache
-  $elements = (array)$cache_response->data;
-  
-  if ($confirm == 'confirmed') {
-    unset($elements[$element_id]);
-    cache_set('matrix-'. $rc .'-'. $field_name, $elements); //save all elements back to the cache
-    
-    $list .= theme('matrix_settings_list', $elements, $rc);
-    echo drupal_to_js(array('list' => $list, 'data' => serialize($elements)));
-    exit();
-  }
-  else {
-    $output = drupal_get_form('matrix_delete_button');
-    echo $output;
-    exit();
-  }
-}
-
-/**
- * Form definition function
- * @return array form definition.
- */
-function matrix_delete_button() {
-  $rc = $_REQUEST['rc'];
-  $form['delete'] = array(
-    '#type' => 'fieldset',
-    '#title' => t('Delete'),
-  );
-  $form['delete']['text'] = array(
-    '#type' => 'markup',
-    '#value' => t('Are you sure you want to delete this element?'). '<br />',
-  );
-  $form['delete']['delete_confirm'] = array(
-    '#type' => 'submit',
-    '#value' => t('Confirm'),
-    '#attributes' => array('class' => "matrix-$rc"),
-  );
-  $form['delete']['delete_cancel'] = array(
-    '#type' => 'submit',
-    '#value' => t('Cancel'),
-    '#attributes' => array('class' => "matrix-$rc"),
-  );
-  $form['delete']['element_id'] = array(
-    '#type' => 'hidden',
-    '#value' => $_REQUEST['element_id'],
-  );
-  return $form;
-}
-
-/**
- * Menu callback for createing a new row/column
- * $_REQUEST contains the settings of an exising row/column
- * @return HTML form.
- */
-function matrix_settings_throbber_callback() {
-  echo drupal_get_form('matrix_settings_throbber_callback_form');
-  exit();
-}
-
-/**
- * Form definition for the throbber
- * This list is called when a new field is added via the settings page or a field is edited
- *
- * @return form definition
- */
-function matrix_settings_throbber_callback_form($form_state) {
-  $field_name = $form_state['post']['field_name'];
-  $rc = $form_state['post']['rc'];
-  $mode =  $form_state['post']['mode'];
-  
-  if ($form_state['post']['element_id'] != 'undefined') {
-    $element_id = $form_state['post']['element_id'];
-    $cache_response = cache_get('matrix-'. $rc .'-'. $field_name); //load existing elements from cache  
-    $elements = (array)$cache_response->data;
-    $default_values = $elements[$element_id];
-  }
-  if (!empty($form_state['post']['element_type']) && $form_state['post']['element_type'] != 'undefined') {
-    $element_type = $form_state['post']['element_type'];
-  }
-  else {
-     $element_type = $default_values['#type'];
-  }
-
-  $form['element'] = array(
-    '#type' => 'fieldset',
-    '#title' => 'add/edit'
-  );
-  $form['element']['element_id'] = array(
-    '#type' => 'hidden',
-    '#value' => $element_id,
-    '#attributes' => array('class' => "matrix-$rc"),
-  );
-  if ($mode == $rc) {
-    $options = array('' => t('- select -'), 'title' => t('Title only'), 'textfield' => t('Textfield'), 'select' => t('Select'), 'checkbox' => t('Checkbox'), 'radios' => t('Radio buttons'), 'calculation' => t('Calculation'));
-  }
-  else {
-    $options = array('' => t('- select -'), 'title' => t('Title only'));
-  }
-  $form['element']['element_type'] = array(
-    '#type' => 'select',
-    '#options' => $options,
-    '#title' => t('Widget type'),
-    '#attributes' => array('class' => "matrix-$rc"),
-    '#default_value' => $element_type,
-  );
-
-  if (!empty($element_type)) { //a widget type has been chosen - render some more form
-    $form['element']['title'] = array(
-      '#type' => 'textfield',
-      '#title' => 'Title',
-      '#size' => 10,
-      '#default_value' => $default_values['#title'],
-      '#attributes' => array('class' => "matrix-$rc"),
-    );
-    
-    switch ($element_type) {
-      case 'textbox':
-        $form['element']['size'] = array(
-          '#type' => 'textfield',
-          '#title' => 'Size',
-          '#size' => 5,
-          '#default_value' => !empty($default_values['#size']) ? $default_values['#size'] : 5,
-          '#attributes' => array('class' => "matrix-$rc"),
-        );
-        break;
-      case 'select':
-      case 'radios':
-        if ($default_values['#options']) {
-          foreach ($default_values['#options'] as $key => $value) {
-            if ($key == $value) {
-              $options .= $value ."\n";
-            }
-            else {
-              $options .= $key .'|'. $value ."\n";
-            }
-          }
-        }
-        
-        $form['element']['options'] = array(
-          '#type' => 'textarea',
-          '#title' => t('Options'),
-          '#description' => t('One option per line.'),
-          '#cols' => 10,
-          '#rows' => 5,
-          '#default_value' => $options,
-          '#attributes' => array('class' => "matrix-$rc"),
-        );     
-        break;
-      
-      case 'calculation':
-        $form['element']['calc_method'] = array(
-          '#type' => 'select',
-          '#title' => t('Calculation type'),
-          '#options' => array('select' => t('- select one -'), 'sum' => t('Sum'), 'average' => t('Average'), 'max' => t('Maximum'), 'min' => t('Minimum'), 'max' => t('Maximum'), 'mode' => t('Most common')),
-          '#description' => t('The calculation type.  Note that apart from "Most common" the other calculation types require numeric data.'),
-          '#default_value' => $default_values['#calc_method'],
-          '#attributes' => array('class' => "matrix-$rc"),
-        );
-        break;
-
-      case 'checkbox':
-      case 'title':
-        break;
-    }
-    
-    $form['element']['required'] = array(
-      '#type' => 'checkbox',
-      '#title' => 'Required',
-      '#default_value' => $default_values['#required'],
-      '#attributes' => array('class' => "matrix-$rc"),
-    );
-    $form['element']['initial'] = array(
-      '#type' => 'checkbox',
-      '#title' => 'Initially showing',
-      '#default_value' => $default_values['#initial'],
-      '#disabled' => TRUE,
-      '#suffix' => '</div><div id="matrix-clear" />',
-      '#attributes' => array('class' => "matrix-$rc"),
-    );
-    $form['element']['save'] = array(
-      '#type' => 'submit',
-      '#value' => 'Save',
-      '#attributes' => array('class' => "matrix-$rc"),
-    );
-    $form['element']['cancel'] = array(
-      '#type' => 'submit',
-      '#value' => 'Cancel',
-      '#attributes' => array('class' => "matrix-$rc"),
-    );
-    $form['element']['delete'] = array(
-      '#type' => 'submit',
-      '#value' => 'Delete',
-      '#attributes' => array('class' => "matrix-$rc"),
-    );
-  }
-  return $form;
-}
 
 /**
  * Implementation of hook_content_is_empty().
@@ -631,7 +378,7 @@ function matrix_process($element, $edit, $form_state, $form) {
   $field = $form['#field_info'][$element['#field_name']];
   $rows = (array)unserialize($field['rows_data']);
   $cols = (array)unserialize($field['cols_data']);
-  
+
   //generate column headers
   $header[] = ''; //first must be blank
   foreach ($cols as $col) {
@@ -656,8 +403,8 @@ function matrix_process($element, $edit, $form_state, $form) {
     '#type_name' => $element['#type_name'],
     '#delta' => $element['#delta'],
     '#columns' => $element['#columns'],
-    '#header' => $header,
-    '#first_col' => $first_col,
+    //'#header' => $header,
+    //'#first_col' => $first_col,
   );
 /*echo 'edit:';
   print_r($edit);
@@ -681,6 +428,7 @@ print_r($field);
       }
     }
   }
+  //print_r($processed_element);
   return $processed_element;
 }
 
@@ -803,6 +551,14 @@ function theme_matrix_formatter_default($element) {
   return $output;
 }
 
+/**
+ * Format cell for display
+ * @param $element_type string The type of element in the cell in question
+ * @param $cell_value string The value of the cell
+ * @param $calc_data array Data used for calculation fields
+ *
+ * @return Formatted cell
+ */
 function _matrix_format_cell($element_type, $cell_value, $calc_data = NULL) {
   switch ($element_type) {
     case 'textfield':
@@ -890,5 +646,3 @@ function matrix_export($nid, $field_name) {
     die();
   }
 }
-
-
