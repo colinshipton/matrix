@@ -8,6 +8,7 @@ function matrix_settings_reorder_save() {
   $source = (int)$_REQUEST['source'];
   $destination = (int)$_REQUEST['destination'];
   $rc = $_REQUEST['rc'];
+  $mode = $_REQUEST['mode'];
   $cache_response = cache_get('matrix-'. $rc .'-' .$field_name); //load existing elements from cache
   
   $elements = (array)$cache_response->data;
@@ -39,7 +40,11 @@ function matrix_settings_reorder_save() {
   
   $list .= theme('matrix_settings_list', $elements, $rc);
   
-  echo drupal_to_js(array('list' => $list, 'data' => serialize($elements)));
+  $rows_data = cache_get('matrix-rows-' .$field_name); //load existing elements from cache
+  $cols_elements = cache_get('matrix-cols-' .$field_name); //load existing elements from cache
+  $preview = drupal_get_form('matrix_settings_preview', $field_name, $mode, $rows_data->data, $cols_elements->data);
+  
+  echo drupal_to_js(array('list' => $list, 'data' => serialize($elements), 'preview' => $preview));
   exit();
 }
 
@@ -55,6 +60,8 @@ function matrix_settings_throbber_save() {
   $field_name = $_REQUEST['field_name'];
   $element_id = (int)$_REQUEST['element_id'];
   $rc = $_REQUEST['rc'];
+  $mode = $_REQUEST['mode'];
+  
   $cache_response = cache_get('matrix-'. $rc .'-' .$field_name); //load existing elements from cache
   
   $elements = (array)$cache_response->data;
@@ -92,7 +99,11 @@ function matrix_settings_throbber_save() {
   
   $list .= theme('matrix_settings_list', $elements, $rc);
   
-  echo drupal_to_js(array('list' => $list, 'data' => serialize($elements)));
+  $rows_data = cache_get('matrix-rows-'. $field_name); //load existing elements from cache
+  $cols_elements = cache_get('matrix-cols-'. $field_name); //load existing elements from cache
+  $preview = drupal_get_form('matrix_settings_preview', $field_name, $mode, $rows_data->data, $cols_elements->data);
+  
+  echo drupal_to_js(array('list' => $list, 'data' => serialize($elements), 'preview' => $preview));
   exit();
 }
 
@@ -200,7 +211,7 @@ function matrix_settings_throbber_callback_form($form_state) {
     '#attributes' => array('class' => "matrix-$rc"),
   );
   if ($mode == $rc) {
-    $options = array('' => t('- select -'), 'title' => t('Title only'), 'textfield' => t('Textfield'), 'select' => t('Select'), 'checkbox' => t('Checkbox'), 'radios' => t('Radio buttons'), 'calculation' => t('Calculation'));
+    $options = array('' => t('- select -'), 'title' => t('Title only'), 'textfield' => t('Textfield'), 'select' => t('Select'), 'checkbox' => t('Checkbox'), 'radios' => t('Radio buttons')); //, 'calculation' => t('Calculation')
   }
   else {
     $options = array('' => t('- select -'), 'title' => t('Title only'));

@@ -45,6 +45,13 @@ function matrix_menu() {
     'file' => 'admin.inc',
     'type' => MENU_CALLBACK,
   );
+  $items['matrix/example'] = array(
+    'title' => 'Example use of matrix as a form element',
+    'page callback' => 'drupal_get_form',
+    'page arguments' => array('matrix_example'),
+    'access arguments' => array('export matrix'),
+    'type' => MENU_CALLBACK,
+  );
   return $items;
 }
 
@@ -62,7 +69,7 @@ function matrix_settings_default($item, $field_name, $rc, $field_data) {
   
   if ($item == 'list') {
     $list = theme('matrix_settings_list', $elements, $rc);
-    return !empty($list) ? $list : t('please add an element');
+    return !empty($elements) ? $list : $list. t('please add an element');
   }
   elseif ($item == 'data') {
     return $field_data;
@@ -98,14 +105,16 @@ function matrix_field_settings($op, $field) {
       drupal_add_css(drupal_get_path('module', 'matrix') .'/matrix.css');
       
       //prep the cache with the form elements
-      cache_set('matrix-rows-'. $field['field_name'], unserialize($field['rows_data']));
-      cache_set('matrix-cols-'. $field['field_name'], unserialize($field['cols_data']));
+      cache_set('matrix-rows-'. $field['field_name'], unserialize($field['rows_elements']));
+      cache_set('matrix-cols-'. $field['field_name'], unserialize($field['cols_elements']));
+      
+      $mode = !empty($field['mode']) ? $field['mode'] : 'cols';
       
       $form['mode'] = array(
         '#type' => 'radios',
         '#title' => t('Rows or columns?'),
         '#options' => array('cols' => t('Columns define element types'), 'rows' => t('Rows define element types')),
-        '#default_value' => isset($field['mode']) ? $field['mode'] : 'cols',
+        '#default_value' => $mode,
         '#description' => t('You can define element types (eg text fields, select boxes) for each cell in the grid.  Choose if the columns or the rows will decide the element types'),
       );  
       $form['cols'] = array(
@@ -114,7 +123,7 @@ function matrix_field_settings($op, $field) {
       );
       $form['cols']['list'] = array(
         '#type' => 'markup',
-        '#value' => matrix_settings_default('list', $field['field_name'], 'cols', $field['cols_data']),
+        '#value' => matrix_settings_default('list', $field['field_name'], 'cols', $field['cols_elements']),
         '#prefix' => '<div id="edit-cols-list">',
         '#suffix' => '</div>',
       );
@@ -127,9 +136,9 @@ function matrix_field_settings($op, $field) {
         '#type' => 'markup',
         '#value' => '<div id="matrix-cols-throbber"></div>',
       );
-      $form['cols']['cols_data'] = array(
+      $form['cols']['cols_elements'] = array(
         '#type' => 'hidden',
-        '#default_value' => matrix_settings_default('data', $field['field_name'], 'cols', $field['cols_data']),
+        '#default_value' => matrix_settings_default('data', $field['field_name'], 'cols', $field['cols_elements']),
       );
 
        $form['rows'] = array(
@@ -138,7 +147,7 @@ function matrix_field_settings($op, $field) {
       );
       $form['rows']['list'] = array(
         '#type' => 'markup',
-        '#value' => matrix_settings_default('list', $field['field_name'], 'rows', $field['rows_data']),
+        '#value' => matrix_settings_default('list', $field['field_name'], 'rows', $field['rows_elements']),
         '#prefix' => '<div id="edit-rows-list">',
         '#suffix' => '</div>',
       );
@@ -151,9 +160,9 @@ function matrix_field_settings($op, $field) {
         '#type' => 'markup',
         '#value' => '<div id="matrix-rows-throbber"></div>',
       );
-      $form['rows']['rows_data'] = array(
+      $form['rows']['rows_elements'] = array(
         '#type' => 'hidden',
-        '#default_value' => matrix_settings_default('data', $field['field_name'], 'rows', $field['rows_data']),
+        '#default_value' => matrix_settings_default('data', $field['field_name'], 'rows', $field['rows_elements']),
       );
 
       $form['preview'] = array(
@@ -162,7 +171,7 @@ function matrix_field_settings($op, $field) {
       );
       $form['preview']['container'] = array(
         '#type' => 'markup',
-        '#value' => matrix_settings_preview($field['field_name'], $field['rows_data'], $field['cols_data']),
+        '#value' => drupal_get_form('matrix_settings_preview', $field['field_name'], $mode, unserialize($field['rows_elements']), unserialize($field['cols_elements'])),
         '#prefix' => '<div id="matrix-preview">',
         '#suffix' => '</div>',
       );
@@ -172,8 +181,8 @@ function matrix_field_settings($op, $field) {
       cache_clear_all('matrix-rows-'. $field['field_name'], 'cache'); 
       cache_clear_all('matrix-cols-'. $field['field_name'], 'cache'); 
       $values[] = 'mode';
-      $values[] = 'rows_data';
-      $values[] = 'cols_data';
+      $values[] = 'rows_elements';
+      $values[] = 'cols_elements';
       return $values;
   }
 }
@@ -181,21 +190,21 @@ function matrix_field_settings($op, $field) {
 /**
  * Build a preview of the element
  * @param $field_name string The  name of the CCK field
- * @param $rows_data string Serialized array of rows data
- * @param $cols_data string Serialized array of cols data
+ * @param $rows_elements string Serialized array of rows data
+ * @param $cols_elements string Serialized array of cols data
  *
  * @return $form_element
  */
-function matrix_settings_preview($field_name, $rows_data, $cols_data) {
+function matrix_settings_preview($form_state, $field_name, $mode, $rows_elements, $cols_elements) {
   $form['matrix_preview'] = array(
     '#type' => 'matrix',
     '#title' => t('Preview'),
     '#description' => t('Preview of the matrix field'),
-    '#rows_data' =>  $rows_data, 
-    '#cols_data' =>  $cols_data, 
-    '#mode' => 'rows',
+    '#rows_elements' =>  $rows_elements, 
+    '#cols_elements' =>  $cols_elements, 
+    '#mode' => $mode,
   );
-  return drupal_render($form);
+  return $form;
 }
 
 /**
@@ -212,7 +221,7 @@ function theme_matrix_settings_list($elements, $rc) {
 
   $header = array(t('Title'), t('Type'), t('Edit'), t('Order'));
   if (!is_array($elements)) {
-    return;
+    return theme('table', $header, $rows, array('id' => "matrix$rc"));
   }
   foreach ($elements as $id => $element) {
     $data = array(  $element['#title'],
@@ -226,8 +235,7 @@ function theme_matrix_settings_list($elements, $rc) {
       'class' => 'draggable',
     );
   }
-  $output .= theme('table', $header, $rows, array('id' => "matrix$rc"));
-  return $output;
+  return theme('table', $header, $rows, array('id' => "matrix$rc"));
 }
 
 
@@ -252,8 +260,9 @@ function matrix_field($op, &$node, $field, &$items, $teaser, $page) {
       while ($data = db_fetch_object($result)) {
         $values['data'][$data->row][$data->col] = $data->value;
       }
-      $values['rows_data'] = $field['rows_data'];
-      $values['cols_data'] = $field['cols_data'];
+      $values['rows_elements'] = $field['rows_elements'];
+      $values['cols_elements'] = $field['cols_elements'];
+      $values['mode'] = $field['mode'];
       $additions = array($field['field_name'] => $values);
       return $additions;
     case 'update':
@@ -261,11 +270,10 @@ function matrix_field($op, &$node, $field, &$items, $teaser, $page) {
        db_query("DELETE FROM {node_field_matrix_data} WHERE vid = %d and field_name= '%s'", $node->vid, $field['field_name']);
     case 'update':
     case 'insert':
-      $rows_data = unserialize($field['rows_data']);
-      $cols_data = unserialize($field['cols_data']);
-//print_r($items);die();
-      foreach ($rows_data as $i => $row) {
-        foreach ($cols_data as $j => $col) {
+      $rows_elements = unserialize($field['rows_elements']);
+      $cols_elements = unserialize($field['cols_elements']);
+      foreach ($rows_elements as $i => $row) {
+        foreach ($cols_elements as $j => $col) {
           db_query("INSERT INTO {node_field_matrix_data} (nid, vid, field_name, row, col, value)
                      VALUES (%d, %d, '%s', %d, %d, '%s')",
                     $node->nid, $node->vid, $field['field_name'], $i, $j, $items[0][$i][$j]
@@ -282,7 +290,7 @@ function matrix_field($op, &$node, $field, &$items, $teaser, $page) {
 function matrix_widget_info() {
   return array(
     'matrix' => array(
-      'label' => 'Text fields in a matrix form',
+      'label' => 'Form elements in a matrix form',
       'field types' => array('matrix'),
       'multiple values' => CONTENT_HANDLE_CORE,
     ),
@@ -316,10 +324,7 @@ function matrix_theme() {
     ),
     'matrix_settings_list' => array(
       'arguments' => array($elements, $rc),
-    ),
-    'matrix' => array(
-       'arguments' => array('element' => NULL)
-    ),
+    )
   );
 }
 
@@ -345,7 +350,7 @@ function theme_matrix_table_form($form) {
   
   $output = drupal_render($form);
   $output .= theme('table', $header, $rows, array('class' => 'matrix'));
-  return $output;
+  return theme('form_element', $form, $output);
 }
 
 /**
@@ -361,14 +366,6 @@ function matrix_elements() {
 }
 
 /**
- * Theme for the field
- */
-function theme_matrix($element) {
-  //$value = drupal_render($element);
-  return theme('form_element', $element, $value);
-}
-
-/**
  * Process the matrix type element before displaying the field.
  *
  * Build the form element. When creating a form using FAPI #process,
@@ -376,20 +373,20 @@ function theme_matrix($element) {
  *
  * For CCK, $fields array is in $form['#field_info'][$element['#field_name']].
  */
-function matrix_process($element, $edit, $form_state, $form) {
+function matrix_process($element, $edit, &$form_state, $form) {
   //as this element can be used by non-cck modules, data needs to be optionally retrieved directly from the form element
   $field = $form['#field_info'][$element['#field_name']];
-  //print_r($field);
   if ($field) {
-    $rows = (array)unserialize($field['rows_data']);
-    $cols = (array)unserialize($field['cols_data']);
+    $rows = (array)unserialize($field['rows_elements']);
+    $cols = (array)unserialize($field['cols_elements']);
     $mode = $field['mode'];
   }
   else {
-    $rows = (array)$element['rows_data'];
-    $cols = (array)$element['cols_data'];
-    $mode = $element['mode'];
+    $rows = (array)$element['#rows_elements'];
+    $cols = (array)$element['#cols_elements'];
+    $mode = $element['#mode'];
   }
+
   //generate column headers
   $header[] = ''; //first must be blank
   foreach ($cols as $col) {
@@ -420,6 +417,8 @@ function matrix_process($element, $edit, $form_state, $form) {
     '#field_name' => $element['#field_name'],
     '#type_name' => $element['#type_name'],
     '#delta' => $element['#delta'],
+    '#mode' => $element['#mode'],
+    '#element_validate' => $element['#element_validate'],
     '#header' => $header,
     '#first_col' => $first_col
   );
@@ -427,16 +426,16 @@ function matrix_process($element, $edit, $form_state, $form) {
   //build out the appropriate form element
   foreach ($rows as $row_id => $row) {
     foreach ($cols as $col_id => $col) {  
-      $default = isset($element['#value'][$row_id][$col_id]) ? $element['#value'][$row_id][$col_id] : $element['#default_value'][$row_id][$col_id];
       if ($mode == 'rows') {
+        $default = isset($element['#value'][$row_id][$col_id]) ? $element['#value'][$row_id][$col_id] : $element['#rows_elements'][$row_id]['#default_value'];
         $processed_element[$row_id][$col_id] = _matrix_process($row, $default);
       }
       else {
+        $default = isset($element['#value'][$row_id][$col_id]) ? $element['#value'][$row_id][$col_id] : $element['#cols_elements'][$col_id]['#default_value'];
         $processed_element[$row_id][$col_id] = _matrix_process($col, $default);
       }
     }
   }
-  
   return $processed_element;
 }
 
@@ -461,18 +460,21 @@ function _matrix_process($element, $default) {
         '#size' => $element['#size'],
         '#required' => $element['#required'],
         '#default_value' => $default,
+        '#required' => TRUE,
       );
     case 'radios':
       return array(
         '#type' => 'radios',
         '#required' => $element['#required'],
         '#options' => $element['#options'],
+        '#default_value' => $default,
       );
     case 'select':
       return array(
         '#type' => 'select',
         '#required' => $elemet['#required'],
         '#options' => $element['#options'],
+        '#default_value' => $default,
       );
     case 'calculation':
       return array(
@@ -489,10 +491,33 @@ function _matrix_process($element, $default) {
 
 /**
  * Validation callback
- * This is mostly to check that custom fields are filled in.
+ * This checks that required fields are filled in.
+ * Calls form_error on elements which are not filled in 
+ *
+ * @param $element The form element to be checked
+ * @param $form_state
+ * @return $element
  */
 function matrix_validate($element, &$form_state) {
-  form_error($element, t('The number must be more than 10.'));
+  if ($element['#field_name'] == '') { //standard element
+    $values = $form_state['values'][$element['#parents'][0]]; //dodgy
+  }
+  else { //cck element
+    $values = $form_state['values'][$element['#parents'][0]][0]; //dodgy
+  }
+  
+  foreach ($element as $row_key => $row) {
+    if (is_numeric($row_key)) { //ignore all other properties
+      foreach ($row as $col_key => $col) {
+        if (is_numeric($col_key)) {
+          if ($col['#required'] == TRUE && $values[$row_key][$col_key] == '') {
+            form_error($element[$row_key][$col_key], t("Cell at %col x %row is required". $row_key .$col_key, array('%row' => strip_tags($element['#first_col'][$row_key]), '%col' => strip_tags($element['#header'][$col_key+1]))));
+          }
+        }
+      }
+    }
+  }
+
   return $element;
 }
 
@@ -517,28 +542,52 @@ function matrix_field_formatter_info() {
  */
 function theme_matrix_formatter_default($element) {
   $field_info = $element['#node']->$element['#field_name'];
-  $rows_data = unserialize($field_info['rows_data']);
-  $cols_data = unserialize($field_info['cols_data']);
+  $rows_elements = unserialize($field_info['rows_elements']);
+  $cols_elements = unserialize($field_info['cols_elements']);
+  $mode = $field_info['mode'];
   
   //if there is no data, just return
-  if (!is_array($rows_data) || !is_array($cols_data)) {
+  if (!is_array($rows_elements) || !is_array($cols_elements)) {
     return;
   }
-  $header = array('');
-  foreach($rows_data as $id => $e) {
+  
+  foreach($rows_elements as $row_id => $e) {
     $rows_header[] = $e['#title'];
   }
-
-  foreach($cols_data as $id => $e) {
+  
+  $header = array('');
+  foreach($cols_elements as $id => $e) {
     $header[] = $e['#title'];
+  }
+  
+  //prepare data for calculation fields
+  foreach($field_info['data'] as $row_id => $row) {
+    foreach($row as $col_id => $value) {
+      $calcdata_cols[$col_id][] = $value; 
+      $calcdata_rows[$row_id][] = $value; 
+    }
   }
 
   //replace blank cells with a dash
   ksort($field_info['data']);
   foreach ($field_info['data'] as $row_index => $row) { 
     ksort($row);
-    foreach ($row as $cell_index => $cell_value) {
-      $data[$row_index][$cell_index] = _matrix_format_cell($element_type, $cell_value, NULL);
+    foreach ($row as $col_index => $cell_value) {
+      $element_type = ($mode == 'rows') ? $rows_elements[$row_index]['#type'] : $cols_elements[$col_index]['#type'];
+      
+      if ($mode == 'rows') {
+       $element_type = $rows_elements[$row_index]['#type'];
+       $calc_data = array('calc_method' => $rows_elements[$row_index]['#calc_method'], 'data' =>  $calcdata_cols[$col_index]);
+      }
+      else {
+       $element_type = $cols_elements[$col_index]['#type'];
+       $calc_data = array('calc_method' => $cols_elements[$col_index]['#calc_method'], 'data' =>  $calcdata_rows[$row_index]);
+      }
+      
+      $data[$row_index][$col_index] = _matrix_format_cell($element_type, $cell_value, $calc_data);
+      if ($data[$row_index][$col_index] != '-') {
+        $show_row = $row_index;
+      }
     }
     $row_label =  '<b>'. array_shift($rows_header) .'</b>';
     array_unshift($data[$row_index], $row_label); 
@@ -581,6 +630,7 @@ function _matrix_format_cell($element_type, $cell_value, $calc_data = NULL) {
     case 'textfield':
     case 'select':
     case 'radios':
+    default:
       if ($cell_value == '') {
         return '-';
       }
@@ -596,24 +646,31 @@ function _matrix_format_cell($element_type, $cell_value, $calc_data = NULL) {
         return t('No');
       }
     case 'calculation':
+              print_r($calc_data);
       switch($calc_data['calc_method']) {
         case 'sum':
+          $sum = 0;
           foreach ($calc_data['data'] as $d) {
-            $sum =+ $d;
+            if (is_numeric($d)) {
+              $sum =+ $d;
+            }
           }
           return $sum;
           
         case 'average':
+          $sum = 0;
           foreach ($calc_data['data'] as $d) {
-            $sum =+ $d;
+            if (is_numeric($d)) {
+              $sum =+ $d;
+            }
           }
-          return $sum/count($calc_data['data']);
+          return round($sum/count($calc_data['data']), 2);
           
         case 'min':
           return min($calc_data['data']);
           
         case 'max':
-          return max($calc_data['data']);
+         // return max($calc_data['data']);
           
         case 'mode':
       
@@ -661,5 +718,105 @@ function matrix_export($nid, $field_name) {
 
     echo $output;
     die();
+  }
+}
+
+function dieDebug($sError) {
+    echo "<hr /><div>".$sError."<br /><table border='1'>";
+    $sOut=""; $aCallstack=debug_backtrace();
+   
+    echo "<thead><tr><th>file</th><th>line</th><th>function</th>".
+        "</tr></thead>";
+    foreach($aCallstack as $aCall)
+    {
+        if (!isset($aCall['file'])) $aCall['file'] = '[PHP Kernel]';
+        if (!isset($aCall['line'])) $aCall['line'] = '';
+
+        echo "<tr><td>{$aCall["file"]}</td><td>{$aCall["line"]}</td>".
+            "<td>{$aCall["function"]}</td></tr>";
+    }
+    echo "</table></div><hr /></p>";
+    die();
+}
+
+function matrix_example() {
+matrix_upgrade();
+  $form['matrixfield'] = array(
+    '#type' => 'matrix',
+    '#mode' => 'cols',
+    '#title' => 'Example matrix element',
+    '#description' => 'This is how you use it!',
+    '#cols_elements' => array(
+      array(
+        '#type' => 'textfield',
+        '#title' => 'Textbox 1',
+        '#default_value' => 'One',
+        '#required' => TRUE,
+      ),
+      array(
+        '#type' => 'title',
+        '#title' => 'Title 1',
+      ),
+      array(
+        '#type' => 'select',
+        '#title' => 'Select 1',
+        '#options' => array('one' => 'One', 'two' => 'Two', 'three' => 'Three'),
+        '#default_value' => 'two',
+      ),
+      array(
+        '#type' => 'checkbox',
+        '#title' => 'Checkbox 1',
+        '#default_value' => TRUE,
+      ),
+      array(
+        '#type' => 'radios',
+        '#title' => 'Radios 1',
+        '#options' => array('one' => 'One', 'two' => 'Two', 'three' => 'Three'),
+        '#default_value' => 'two',
+      ),
+    ),
+    '#rows_elements' => array(
+      array(
+        '#title' => 'Row 1'
+      ),
+      array(
+        '#title' => 'Row 2'
+      ),
+      array(
+        '#title' => 'Row 3'
+      ),      
+    ),
+  );
+  $form['submit'] = array(
+    '#type' => 'submit',
+    '#value' => t('Submit')
+  );
+  return $form;
+}
+
+function matrix_example_submit($form_id, $form_state) {
+  print_r($form_state['values']['matrixfield']);
+  die();
+}
+
+function matrix_upgrade() {
+ $result = db_query("SELECT field_name, global_settings FROM {content_node_field} WHERE type = 'matrix'");
+  while ($row = db_fetch_object($result)) {
+    $old = unserialize($row->global_settings);
+    print_r($old);
+    print_r(unserialize($old['cols_data']));
+    foreach ($old as $item => $value) {
+      $a = explode('_', $item);
+      if ($a[0] == 'label' && $a[1] == 'row' && !empty($value)) {
+        $rows[] = $value;
+      }
+      if ($a[0] == 'label' && $a[1] == 'column' && !empty($value)) {
+        $column[] = $value;
+      }
+    }
+    $new = array('mode' => 'cols',
+                 'rows_elements' => serialize(),
+                 'cols_elements' => serialize());
+ //   db_query("UPDATE {content_node_field} SET global_settings = '%s' WHERE field_name = '%s'", serialize($new), $row->field_name);
   }
 }

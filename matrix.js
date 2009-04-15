@@ -21,7 +21,8 @@ function matrix_element_form (e) {
     
     $('#edit-save').click(function(){ //when the save button is clicked
       rc = matrix_find_rc(this); //work out if we are dealing with rows or columns (rc)
-      
+      mode = $("input[name='mode']:checked").val();
+
       jQuery.getJSON(Drupal.settings.basePath + "matrix/throbber/save", //call the save callback
         {'rc': rc, //rows or columns
          'field_name': $('#edit-field-name').val(), //CCK field name
@@ -33,11 +34,13 @@ function matrix_element_form (e) {
          'required': $('.matrix-'+ rc +'#edit-required').attr("checked"),
          'initial': $('.matrix-'+ rc +'#edit-initial').attr("checked"),
          'calc_method': $('.matrix-'+ rc +'#edit-calc-method').val(),
+         'mode' : mode,
         },
         function(res) { //after the element is saved rebuild the list of elements and the data form element
           $('#edit-'+ rc +'-list').html(res.list); //this is the list of elements
           $('#edit-'+ rc +'-data').val(res.data); //this is the serialized data which will eventually go back to the database
           $('#matrix-'+ rc +'-throbber').html(''); //remove the form elements
+          $('#matrix-preview').html(res.preview); //show the new preview
           $('a.matrix-settings-edit').bind('click', matrix_element_form); //rebind click events on th edit buttons
           Drupal.attachBehaviors('#edit-'+ rc +'-list'); //attach drupal events such as dragtable
         });
@@ -51,14 +54,17 @@ function matrix_element_form (e) {
     
     $('#edit-delete').click(function(){ //when the delete button is clicked
       rc = matrix_find_rc(this); //work out if we are dealing with rows or columns (rc)
-      
-      $('#matrix-'+ rc +'-throbber').load(Drupal.settings.basePath + "matrix/throbber/delete", {'rc': rc, 'element_id': $('.matrix-'+ rc +'#edit-element-id').val(), 'field_name': $('#edit-field-name').val()}, function() { //fetch the delete button
+      mode = $("input[name='mode']:checked").val();
+
+      $('#matrix-'+ rc +'-throbber').load(Drupal.settings.basePath + "matrix/throbber/delete", {'rc': rc, 'mode': mode, 'element_id': $('.matrix-'+ rc +'#edit-element-id').val(), 'field_name': $('#edit-field-name').val()}, function() { //fetch the delete button
         $('#edit-delete-confirm').bind('click', function(){ //when the confirm button is pushed
           rc = matrix_find_rc(this); //work out if we are dealing with rows or columns (rc)
-        
+          mode = $("input[name='mode']:checked").val();
+
           jQuery.getJSON(Drupal.settings.basePath + "matrix/throbber/delete",
             {'confirm' : 'confirmed',
              'rc' : rc,
+             'mode': mode,
              'element_id': $('#edit-element-id').val(),
              'field_name': $('#edit-field-name').val()
             },
@@ -132,15 +138,19 @@ Drupal.behaviors.blockDrag = function(context) {
  *
  */
 function matrix_dragTable(orderField, rc) {
+  mode = $("input[name='mode']:checked").val();
+
   jQuery.getJSON(Drupal.settings.basePath + "matrix/reorder", //call the save callback
         {'rc': rc, //rows or columns
          'field_name': $('#edit-field-name').val(), //CCK field name
          'source': orderField[0].id,
-         'destination': orderField[0].value
+         'destination': orderField[0].value,
+         'mode': mode
         },
         function(res) { //after the element is saved rebuild the list of elements and the data form element
           $('#edit-'+ rc +'-list').html(res.list); //this is the list of elements
           $('#edit-'+ rc +'-data').val(res.data); //this is the serialized data which will eventually go back to the database
+          $('#matrix-preview').html(res.preview); //show the new preview
           $('a.matrix-settings-edit').bind('click', matrix_element_form); //rebind click events on th edit buttons
           Drupal.attachBehaviors('#edit-'+ rc +'-list'); //reattach drupal based events
         });
