@@ -69,7 +69,7 @@ function matrix_settings_default($item, $field_name, $rc, $field_data) {
   
   if ($item == 'list') {
     $list = theme('matrix_settings_list', $elements, $rc);
-    return !empty($elements) ? $list : $list. t('please add an element');
+    return !empty($elements) ? $list : $list . t('please add an element');
   }
   elseif ($item == 'data') {
     return $field_data;
@@ -391,7 +391,7 @@ function matrix_process($element, $edit, &$form_state, $form) {
   $header[] = ''; //first must be blank
   foreach ($cols as $col) {
     if ($col['#required'] == TRUE) {
-      $header[] = $col['#title'] . '<span class="form-required" title="This field is required.">*</span>';
+      $header[] = $col['#title'] .'<span class="form-required" title="This field is required.">*</span>';
     }
     else {
       $header[] = $col['#title'];
@@ -511,7 +511,7 @@ function matrix_validate($element, &$form_state) {
       foreach ($row as $col_key => $col) {
         if (is_numeric($col_key)) {
           if ($col['#required'] == TRUE && $values[$row_key][$col_key] == '') {
-            form_error($element[$row_key][$col_key], t("Cell at %col x %row is required". $row_key .$col_key, array('%row' => strip_tags($element['#first_col'][$row_key]), '%col' => strip_tags($element['#header'][$col_key+1]))));
+            form_error($element[$row_key][$col_key], t("Cell at %col x %row is required". $row_key . $col_key, array('%row' => strip_tags($element['#first_col'][$row_key]), '%col' => strip_tags($element['#header'][$col_key+1]))));
           }
         }
       }
@@ -551,18 +551,18 @@ function theme_matrix_formatter_default($element) {
     return;
   }
   
-  foreach($rows_elements as $row_id => $e) {
+  foreach ($rows_elements as $row_id => $e) {
     $rows_header[] = $e['#title'];
   }
   
   $header = array('');
-  foreach($cols_elements as $id => $e) {
+  foreach ($cols_elements as $id => $e) {
     $header[] = $e['#title'];
   }
   
   //prepare data for calculation fields
-  foreach($field_info['data'] as $row_id => $row) {
-    foreach($row as $col_id => $value) {
+  foreach ($field_info['data'] as $row_id => $row) {
+    foreach ($row as $col_id => $value) {
       $calcdata_cols[$col_id][] = $value; 
       $calcdata_rows[$row_id][] = $value; 
     }
@@ -596,7 +596,7 @@ function theme_matrix_formatter_default($element) {
   //this can happen when columns/rows are added to an existing content type
   $row_count = count($data[0]);
   if ($row_count < count($header)) {
-    for($i = $row_count; $i < count($header); $i++) {
+    for ($i = $row_count; $i < count($header); $i++) {
       for ($j = 0; $j < count($data); $j++) {
         $data[$j][$i] = '-';
       }
@@ -646,8 +646,7 @@ function _matrix_format_cell($element_type, $cell_value, $calc_data = NULL) {
         return t('No');
       }
     case 'calculation':
-              print_r($calc_data);
-      switch($calc_data['calc_method']) {
+      switch ($calc_data['calc_method']) {
         case 'sum':
           $sum = 0;
           foreach ($calc_data['data'] as $d) {
@@ -706,37 +705,19 @@ function matrix_export($nid, $field_name) {
       $field['cols_header'][$index] = trim($value);
     }
     array_unshift($field['cols_header'], '');
-    $output .= '"'. implode('", "', $field['cols_header']). "\"\n";
+    $output .= '"'. implode('", "', $field['cols_header']) ."\"\n";
     
     $i=0;
     foreach ($field['data'] as $row) {
-      $output .= '"'. trim($field['rows_header'][$i]) .'", "'. implode('", "', $row). "\"\n";
+      $output .= '"'. trim($field['rows_header'][$i]) .'", "'. implode('", "', $row) ."\"\n";
       $i++;
     }
     header('Content-type: text/csv');
-    header('Content-Disposition: attachment; filename="'.$nid .'-'. $field_name .'.csv"');
+    header('Content-Disposition: attachment; filename="'. $nid .'-'. $field_name .'.csv"');
 
     echo $output;
     die();
   }
-}
-
-function dieDebug($sError) {
-    echo "<hr /><div>".$sError."<br /><table border='1'>";
-    $sOut=""; $aCallstack=debug_backtrace();
-   
-    echo "<thead><tr><th>file</th><th>line</th><th>function</th>".
-        "</tr></thead>";
-    foreach($aCallstack as $aCall)
-    {
-        if (!isset($aCall['file'])) $aCall['file'] = '[PHP Kernel]';
-        if (!isset($aCall['line'])) $aCall['line'] = '';
-
-        echo "<tr><td>{$aCall["file"]}</td><td>{$aCall["line"]}</td>".
-            "<td>{$aCall["function"]}</td></tr>";
-    }
-    echo "</table></div><hr /></p>";
-    die();
 }
 
 function matrix_example() {
