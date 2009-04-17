@@ -86,7 +86,6 @@ function matrix_settings_throbber_save() {
   $data['#options'] = $options;
   $data['#size'] = $_REQUEST['size'] != 'undefined' ? $_REQUEST['size'] : '';
   $data['#required'] = ($_REQUEST['required'] == 'true') ? 1 : 0;
-  $data['#initial'] = ($_REQUEST['initial'] == 'true') ? 1 : 0;
   $data['#calc_method'] = $_REQUEST['calc_method'];
   
   if ($element_id != '') {
@@ -205,7 +204,7 @@ function matrix_settings_throbber_callback_form($form_state) {
 
   $form['element'] = array(
     '#type' => 'fieldset',
-    '#title' => 'add/edit'
+    '#title' => t('add/edit'),
   );
   $form['element']['element_id'] = array(
     '#type' => 'hidden',
@@ -229,7 +228,7 @@ function matrix_settings_throbber_callback_form($form_state) {
   if (!empty($element_type)) { //a widget type has been chosen - render some more form
     $form['element']['title'] = array(
       '#type' => 'textfield',
-      '#title' => 'Title',
+      '#title' => t('Title'),
       '#size' => 10,
       '#default_value' => $default_values['#title'],
       '#attributes' => array('class' => "matrix-$rc"),
@@ -239,7 +238,7 @@ function matrix_settings_throbber_callback_form($form_state) {
       case 'textbox':
         $form['element']['size'] = array(
           '#type' => 'textfield',
-          '#title' => 'Size',
+          '#title' => t('Size'),
           '#size' => 5,
           '#default_value' => !empty($default_values['#size']) ? $default_values['#size'] : 5,
           '#attributes' => array('class' => "matrix-$rc"),
@@ -287,31 +286,23 @@ function matrix_settings_throbber_callback_form($form_state) {
     
     $form['element']['required'] = array(
       '#type' => 'checkbox',
-      '#title' => 'Required',
+      '#title' => t('Required'),
       '#default_value' => $default_values['#required'],
-      '#attributes' => array('class' => "matrix-$rc"),
-    );
-    $form['element']['initial'] = array(
-      '#type' => 'checkbox',
-      '#title' => 'Initially showing',
-      '#default_value' => $default_values['#initial'],
-      '#disabled' => TRUE,
-      '#suffix' => '</div><div id="matrix-clear" />',
       '#attributes' => array('class' => "matrix-$rc"),
     );
     $form['element']['save'] = array(
       '#type' => 'submit',
-      '#value' => 'Save',
+      '#value' => t('Save'),
       '#attributes' => array('class' => "matrix-$rc"),
     );
     $form['element']['cancel'] = array(
       '#type' => 'submit',
-      '#value' => 'Cancel',
+      '#value' => t('Cancel'),
       '#attributes' => array('class' => "matrix-$rc"),
     );
     $form['element']['delete'] = array(
       '#type' => 'submit',
-      '#value' => 'Delete',
+      '#value' => t('Delete'),
       '#attributes' => array('class' => "matrix-$rc"),
     );
   }

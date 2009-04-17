@@ -119,7 +119,7 @@ function matrix_field_settings($op, $field) {
       );  
       $form['cols'] = array(
         '#type' => 'fieldset',
-        '#title' => 'Columns',
+        '#title' => t('Columns'),
       );
       $form['cols']['list'] = array(
         '#type' => 'markup',
@@ -129,7 +129,7 @@ function matrix_field_settings($op, $field) {
       );
       $form['cols']['add_cols'] = array(
         '#type' => 'button',
-        '#value' => 'Add new column',
+        '#value' => t('Add new column'),
         '#attributes' => array('class' => 'matrix-cols'),
       );
       $form['cols']['throbber'] = array(
@@ -143,7 +143,7 @@ function matrix_field_settings($op, $field) {
 
        $form['rows'] = array(
         '#type' => 'fieldset',
-        '#title' => 'Rows',
+        '#title' => t('Rows'),
       );
       $form['rows']['list'] = array(
         '#type' => 'markup',
@@ -153,7 +153,7 @@ function matrix_field_settings($op, $field) {
       );
       $form['rows']['add_rows'] = array(
         '#type' => 'button',
-        '#value' => 'Add new row',
+        '#value' => t('Add new row'),
         '#attributes' => array('class' => 'matrix-rows'),
       );
       $form['rows']['throbber'] = array(
@@ -167,7 +167,7 @@ function matrix_field_settings($op, $field) {
 
       $form['preview'] = array(
         '#type' => 'fieldset',
-        '#title' => 'Preview',
+        '#title' => t('Preview'),
       );
       $form['preview']['container'] = array(
         '#type' => 'markup',
@@ -290,7 +290,7 @@ function matrix_field($op, &$node, $field, &$items, $teaser, $page) {
 function matrix_widget_info() {
   return array(
     'matrix' => array(
-      'label' => 'Form elements in a matrix form',
+      'label' => t('Form elements in a matrix form'),
       'field types' => array('matrix'),
       'multiple values' => CONTENT_HANDLE_CORE,
     ),
@@ -511,7 +511,7 @@ function matrix_validate($element, &$form_state) {
       foreach ($row as $col_key => $col) {
         if (is_numeric($col_key)) {
           if ($col['#required'] == TRUE && $values[$row_key][$col_key] == '') {
-            form_error($element[$row_key][$col_key], t("Cell at %col x %row is required". $row_key . $col_key, array('%row' => strip_tags($element['#first_col'][$row_key]), '%col' => strip_tags($element['#header'][$col_key+1]))));
+            form_error($element[$row_key][$col_key], t("Cell at %col x %row is required", array('%row' => strip_tags($element['#first_col'][$row_key]), '%col' => strip_tags($element['#header'][$col_key+1]))));
           }
         }
       }
@@ -612,7 +612,7 @@ function theme_matrix_formatter_default($element) {
 
   $output = theme('table', $header, $flushed_data);
   if (user_access('export matrix')) {
-    $output .= l('Export data', 'matrix/export/'. $element['#node']->nid .'/'. $element['#field_name']);
+    $output .= l(t('Export data'), 'matrix/export/'. $element['#node']->nid .'/'. $element['#field_name']);
   }
   return $output;
 }

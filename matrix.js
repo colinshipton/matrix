@@ -32,7 +32,6 @@ function matrix_element_form (e) {
          'options': $('.matrix-'+ rc +'#edit-options').val(),
          'size': $('.matrix-'+ rc +'#edit-size').val(),
          'required': $('.matrix-'+ rc +'#edit-required').attr("checked"),
-         'initial': $('.matrix-'+ rc +'#edit-initial').attr("checked"),
          'calc_method': $('.matrix-'+ rc +'#edit-calc-method').val(),
          'mode' : mode,
         },
