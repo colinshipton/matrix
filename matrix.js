@@ -37,7 +37,7 @@ function matrix_element_form (e) {
         },
         function(res) { //after the element is saved rebuild the list of elements and the data form element
           $('#edit-'+ rc +'-list').html(res.list); //this is the list of elements
-          $('#edit-'+ rc +'-data').val(res.data); //this is the serialized data which will eventually go back to the database
+          $('#edit-'+ rc +'-elements').val(res.data); //this is the serialized data which will eventually go back to the database
           $('#matrix-'+ rc +'-throbber').html(''); //remove the form elements
           $('#matrix-preview').html(res.preview); //show the new preview
           $('a.matrix-settings-edit').bind('click', matrix_element_form); //rebind click events on th edit buttons
@@ -69,7 +69,7 @@ function matrix_element_form (e) {
             },
             function(res){ //delete the element
               $('#edit-'+ rc +'-list').html(res.list); //this is the list of elements
-              $('#edit-'+ rc +'-data').val(res.data); //this is the serialized data which will eventually go back to the database
+              $('#edit-'+ rc +'-elements').val(res.data); //this is the serialized data which will eventually go back to the database
               $('a.matrix-settings-edit').bind('click', matrix_element_form); //rebind events
               Drupal.attachBehaviors('#edit-'+ rc +'-list'); //reattach drupal originating events
               $('#matrix-'+ rc +'-throbber').html('Component deleted'); //remove the form elements
@@ -148,7 +148,7 @@ function matrix_dragTable(orderField, rc) {
         },
         function(res) { //after the element is saved rebuild the list of elements and the data form element
           $('#edit-'+ rc +'-list').html(res.list); //this is the list of elements
-          $('#edit-'+ rc +'-data').val(res.data); //this is the serialized data which will eventually go back to the database
+          $('#edit-'+ rc +'-elements').val(res.data); //this is the serialized data which will eventually go back to the database
           $('#matrix-preview').html(res.preview); //show the new preview
           $('a.matrix-settings-edit').bind('click', matrix_element_form); //rebind click events on th edit buttons
           Drupal.attachBehaviors('#edit-'+ rc +'-list'); //reattach drupal based events

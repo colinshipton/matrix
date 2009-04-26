@@ -436,6 +436,7 @@ function matrix_process($element, $edit, &$form_state, $form) {
       }
     }
   }
+
   return $processed_element;
 }
 
@@ -717,87 +718,5 @@ function matrix_export($nid, $field_name) {
 
     echo $output;
     die();
-  }
-}
-
-function matrix_example() {
-matrix_upgrade();
-  $form['matrixfield'] = array(
-    '#type' => 'matrix',
-    '#mode' => 'cols',
-    '#title' => 'Example matrix element',
-    '#description' => 'This is how you use it!',
-    '#cols_elements' => array(
-      array(
-        '#type' => 'textfield',
-        '#title' => 'Textbox 1',
-        '#default_value' => 'One',
-        '#required' => TRUE,
-      ),
-      array(
-        '#type' => 'title',
-        '#title' => 'Title 1',
-      ),
-      array(
-        '#type' => 'select',
-        '#title' => 'Select 1',
-        '#options' => array('one' => 'One', 'two' => 'Two', 'three' => 'Three'),
-        '#default_value' => 'two',
-      ),
-      array(
-        '#type' => 'checkbox',
-        '#title' => 'Checkbox 1',
-        '#default_value' => TRUE,
-      ),
-      array(
-        '#type' => 'radios',
-        '#title' => 'Radios 1',
-        '#options' => array('one' => 'One', 'two' => 'Two', 'three' => 'Three'),
-        '#default_value' => 'two',
-      ),
-    ),
-    '#rows_elements' => array(
-      array(
-        '#title' => 'Row 1'
-      ),
-      array(
-        '#title' => 'Row 2'
-      ),
-      array(
-        '#title' => 'Row 3'
-      ),      
-    ),
-  );
-  $form['submit'] = array(
-    '#type' => 'submit',
-    '#value' => t('Submit')
-  );
-  return $form;
-}
-
-function matrix_example_submit($form_id, $form_state) {
-  print_r($form_state['values']['matrixfield']);
-  die();
-}
-
-function matrix_upgrade() {
- $result = db_query("SELECT field_name, global_settings FROM {content_node_field} WHERE type = 'matrix'");
-  while ($row = db_fetch_object($result)) {
-    $old = unserialize($row->global_settings);
-    print_r($old);
-    print_r(unserialize($old['cols_data']));
-    foreach ($old as $item => $value) {
-      $a = explode('_', $item);
-      if ($a[0] == 'label' && $a[1] == 'row' && !empty($value)) {
-        $rows[] = $value;
-      }
-      if ($a[0] == 'label' && $a[1] == 'column' && !empty($value)) {
-        $column[] = $value;
-      }
-    }
-    $new = array('mode' => 'cols',
-                 'rows_elements' => serialize(),
-                 'cols_elements' => serialize());
- //   db_query("UPDATE {content_node_field} SET global_settings = '%s' WHERE field_name = '%s'", serialize($new), $row->field_name);
   }
 }
