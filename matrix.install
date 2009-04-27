@@ -136,4 +136,7 @@ function matrix_update_620() {
                 );
     db_query("UPDATE {content_node_field} SET global_settings = '%s' WHERE field_name = '%s'", serialize($new), $row->field_name);
   }
+  
+  $res[] = array('success' => true, 'query' => 'Matrix fields updated');
+  return $res;
 }
