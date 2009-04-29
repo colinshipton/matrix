@@ -425,13 +425,22 @@ function matrix_process($element, $edit, &$form_state, $form) {
 
   //build out the appropriate form element
   foreach ($rows as $row_id => $row) {
-    foreach ($cols as $col_id => $col) {  
+    foreach ($cols as $col_id => $col) { 
+      //get default value    
+      if (isset($element['#value'][$row_id][$col_id])) { //cck value
+        $default = $element['#value'][$row_id][$col_id];
+      }
+      else if (isset($form['#field']['widget']['default_value'][0][$row_id][$col_id])) { //cck default value
+        $default = $form['#field']['widget']['default_value'][0][$row_id][$col_id];
+      }
+      else {
+        $default = $element['#rows_elements'][$row_id]['#default_value']; //form element value
+      }
+
       if ($mode == 'rows') {
-        $default = isset($element['#value'][$row_id][$col_id]) ? $element['#value'][$row_id][$col_id] : $element['#rows_elements'][$row_id]['#default_value'];
         $processed_element[$row_id][$col_id] = _matrix_process($row, $default);
       }
       else {
-        $default = isset($element['#value'][$row_id][$col_id]) ? $element['#value'][$row_id][$col_id] : $element['#cols_elements'][$col_id]['#default_value'];
         $processed_element[$row_id][$col_id] = _matrix_process($col, $default);
       }
     }
