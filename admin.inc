@@ -84,6 +84,7 @@ function matrix_settings_throbber_save() {
   $data['#type'] = $_REQUEST['element_type'];
   $data['#title'] = $_REQUEST['title'];
   $data['#options'] = $options;
+  $data['#validation'] = $_REQUEST['validation'];
   $data['#size'] = $_REQUEST['size'] != 'undefined' ? $_REQUEST['size'] : '';
   $data['#required'] = ($_REQUEST['required'] == 'true') ? 1 : 0;
   $data['#calc_method'] = $_REQUEST['calc_method'];
@@ -243,9 +244,17 @@ function matrix_settings_throbber_callback_form($form_state) {
           '#default_value' => !empty($default_values['#size']) ? $default_values['#size'] : 5,
           '#attributes' => array('class' => "matrix-$rc"),
         );
+        $form['element']['validation'] = array(
+          '#type' => 'select',
+          '#title' => t('Validation'),
+          '#options' => array('none' => t('None'), 'numeric' => t('Numeric'), 'custom' => t('Custom')),
+          '#default_value' => !empty($default_values['#validation']) ? $default_values['#validation'] : 5,
+          '#attributes' => array('class' => "matrix-$rc"),
+        );
         break;
       case 'select':
       case 'radios':
+        $options = '';
         if ($default_values['#options']) {
           foreach ($default_values['#options'] as $key => $value) {
             if ($key == $value) {

@@ -31,6 +31,7 @@ function matrix_element_form (e) {
          'title': $('.matrix-'+ rc +'#edit-title').val(),
          'options': $('.matrix-'+ rc +'#edit-options').val(),
          'size': $('.matrix-'+ rc +'#edit-size').val(),
+         'validation': $('.matrix-'+ rc +'#edit-validation').val(),
          'required': $('.matrix-'+ rc +'#edit-required').attr("checked"),
          'calc_method': $('.matrix-'+ rc +'#edit-calc-method').val(),
          'mode' : mode,
@@ -47,6 +48,7 @@ function matrix_element_form (e) {
     });
 
     $('#edit-cancel').click(function(){ //when the cancel button is clicked
+      rc = matrix_find_rc(this); //work out if we are dealing with rows or columns (rc)
       $('#matrix-'+ rc +'-throbber').html(''); //just remove the form elements
       return false; //this prevents the cancel button from reloading the form
     });
@@ -78,6 +80,7 @@ function matrix_element_form (e) {
         });
         
         $('#edit-delete-cancel').bind('click', function(){ //when the cancel button is pushed
+          rc = matrix_find_rc(this); //work out if we are dealing with rows or columns (rc)
           $('#matrix-'+ rc +'-throbber').html('');
           return false; //this prevents the cancel from reloading the form
         });
