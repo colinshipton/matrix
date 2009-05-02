@@ -119,8 +119,8 @@ THEMEING:
 ---------
 It is possible to alter the display of a CCK matrix field using the theme layer.
 To do this you first need to copy two files to your theme directory:
-* sites\all\modules\cck\theme\content-field.tpl.php file to your theme directory
-* sites\all\modules\matrix\content-field-field_fieldname.tpl.php
+* sites/all/modules/cck/theme/content-field.tpl.php file to your theme directory
+* sites/all/modules/matrix/content-field-field_fieldname.tpl.php
 Rename the second .tpl.php file, replacing "fieldname" with the name of your field
 Rebuild your sites theme registry (admin >> performance >> clear cache)
 Modify this file to do the theme changes you desire.

@@ -432,8 +432,8 @@ function matrix_process($element, $edit, &$form_state, $form) {
       if (isset($element['#value'][$row_id][$col_id])) { //cck value
         $default = $element['#value'][$row_id][$col_id];
       }
-      else if (isset($form['#field']['widget']['default_value'][0][$row_id][$col_id])) { //cck default value
-        $default = $form['#field']['widget']['default_value'][0][$row_id][$col_id];
+      else if (isset($form['#field_info'][$element['#field_name']]['widget']['default_value'][0][$row_id][$col_id])) { //cck default value
+        $default = $form['#field_info'][$element['#field_name']]['widget']['default_value'][0][$row_id][$col_id];
       }
       else {
         $default = $element['#rows_elements'][$row_id]['#default_value']; //form element value
