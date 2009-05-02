@@ -324,7 +324,10 @@ function matrix_theme() {
     ),
     'matrix_settings_list' => array(
       'arguments' => array($elements, $rc),
-    )
+    ),
+    'matrix_table' => array(
+      'arguments' => array($data, $attributes => array(), $caption => NULL),
+    ),
   );
 }
 
@@ -422,7 +425,6 @@ function matrix_process($element, $edit, &$form_state, $form) {
     '#header' => $header,
     '#first_col' => $first_col
   );
-
   //build out the appropriate form element
   foreach ($rows as $row_id => $row) {
     foreach ($cols as $col_id => $col) { 
@@ -577,107 +579,46 @@ function matrix_field_formatter_info() {
       'label' => t('Title, as matrix (default)'),
       'field types' => array('matrix'),
     ),
-    'custom' => array(
-      'label' => t('Custom display using .tpl.php files'),
-      'field types' => array('matrix'),
-    ),
   );
 }
 
 /**
  * Theme function for 'default' text field formatter.
- * This gets called for each row, but we only want to render all the data at once
- * so we use a staticly cached variable to ignore subsquent calls.
  * @param $element The whole $node object, but containing specific information relating to the delta of this element.
  * @return HTML.
  */
 function theme_matrix_formatter_default($element) {
   $field_info = $element['#node']->$element['#field_name'];
-  $rows_elements = unserialize($field_info['rows_elements']);
-  $cols_elements = unserialize($field_info['cols_elements']);
-  $mode = $field_info['mode'];
   
-  //if there is no data, just return
-  if (!is_array($rows_elements) || !is_array($cols_elements)) {
-    return;
-  }
+  $prepared = matrix_format_prepare($field_info);
+  //if you want to customize the formatting, manipulate $prepared['data'] before passing it to theme('matrix_table'...)
+  $output = theme('matrix_table', $prepared['data']);
+  $output .=  $prepared['links']; //eg export link
   
-  foreach ($rows_elements as $row_id => $e) {
-    $rows_header[] = $e['#title'];
-  }
-  
-  $header = array('');
-  foreach ($cols_elements as $id => $e) {
-    $header[] = $e['#title'];
-  }
-  
-  //prepare data for calculation fields
-  foreach ($field_info['data'] as $row_id => $row) {
-    foreach ($row as $col_id => $value) {
-      $calcdata_cols[$col_id][] = $value; 
-      $calcdata_rows[$row_id][] = $value; 
-    }
-  }
-
-  //replace blank cells with a dash
-  ksort($field_info['data']);
-  foreach ($field_info['data'] as $row_index => $row) { 
-    ksort($row);
-    foreach ($row as $col_index => $cell_value) {
-      $element_type = ($mode == 'rows') ? $rows_elements[$row_index]['#type'] : $cols_elements[$col_index]['#type'];
-      
-      if ($mode == 'rows') {
-       $element_type = $rows_elements[$row_index]['#type'];
-       $calc_data = array('calc_method' => $rows_elements[$row_index]['#calc_method'], 'data' =>  $calcdata_cols[$col_index]);
-      }
-      else {
-       $element_type = $cols_elements[$col_index]['#type'];
-       $calc_data = array('calc_method' => $cols_elements[$col_index]['#calc_method'], 'data' =>  $calcdata_rows[$row_index]);
-      }
-      
-      $data[$row_index][$col_index] = _matrix_format_cell($element_type, $cell_value, $calc_data);
-      if ($data[$row_index][$col_index] != '-') {
-        $show_row = $row_index;
-      }
-    }
-    $row_label =  '<b>'. array_shift($rows_header) .'</b>';
-    array_unshift($data[$row_index], $row_label); 
-  }
-  //add blank cells if the number of rows/columns is different to the number of headers
-  //this can happen when columns/rows are added to an existing content type
-  $row_count = count($data[0]);
-  if ($row_count < count($header)) {
-    for ($i = $row_count; $i < count($header); $i++) {
-      for ($j = 0; $j < count($data); $j++) {
-        $data[$j][$i] = '-';
-      }
-    }
-  }
-
-  //strip out rows at the end of the dataset where there is no data
-  foreach ($data as $row_id => $row) {
-    if ($row_id <= $show_row) {
-      $flushed_data[] = $row;
-    }
-  }
-
-  $output = theme('table', $header, $flushed_data);
-  if (user_access('export matrix')) {
-    $output .= l(t('Export data'), 'matrix/export/'. $element['#node']->nid .'/'. $element['#field_name']);
-  }
   return $output;
 }
-
 
 /**
- * Theme function for 'custom'  field formatter.
- * This gets called for each row, but we only want to render all the data at once
- * so we use a staticly cached variable to ignore subsquent calls.
- * @param $element The whole $node object, but containing specific information relating to the delta of this element.
- * @return HTML.
+ * Themes a matrix table
+ * This is similar to theme_table except it prepends the $first_col to each $rows
+ * @param$header An array containing the table headers. 
+ * @param$first_col An array containing the left hand side headers. 
+ * @param $rows An array of table rows. Every row is an array of cells.
+ * @param $attributes An array of HTML attributes to apply to the table tag.
+ * @param $caption A localized string to use for the <caption> tag.
+ *
+ * @return HTML 
  */
-function theme_matrix_formatter_custom($element) {
-  $field_info = $element['#node']->$element['#field_name'];
+function theme_matrix_table($data, $attributes = array(), $caption = NULL) {
+  $header = array_shift($data);
+  return theme('table', $header, $data, $attributes, $caption);
+}
+/**
+ * Prepare the data to be rendered.
+ * @param $element The whole $node object, but containing specific information relating to the delta of this element.
+ * @return array containing the header, first col, and the data
+ */
+function matrix_format_prepare($field_info, $item = null) {
   $rows_elements = unserialize($field_info['rows_elements']);
   $cols_elements = unserialize($field_info['cols_elements']);
   $mode = $field_info['mode'];
@@ -685,6 +626,15 @@ function theme_matrix_formatter_custom($element) {
   //if there is no data, just return
   if (!is_array($rows_elements) || !is_array($cols_elements)) {
     return;
+  }
+  
+  //prepare the data - this will either live in $field_info['data'] (defaut formatter) or in $item (.tpl.php file)
+  if (isset($item)) {
+    foreach ($item as $key => $value) {
+      if (is_numeric($key)) {
+        $field_info['data'][] = $value;
+      }
+    }
   }
   
   foreach ($rows_elements as $row_id => $e) {
@@ -738,7 +688,9 @@ function theme_matrix_formatter_custom($element) {
       }
     }
   }
-
+  
+  $flushed_data[] = $header;
+  
   //strip out rows at the end of the dataset where there is no data
   foreach ($data as $row_id => $row) {
     if ($row_id <= $show_row) {
@@ -746,12 +698,16 @@ function theme_matrix_formatter_custom($element) {
     }
   }
 
-  $output = theme('table', $header, $flushed_data);
   if (user_access('export matrix')) {
-    $output .= l(t('Export data'), 'matrix/export/'. $element['#node']->nid .'/'. $element['#field_name']);
+    $links = l(t('Export data'), 'matrix/export/'. $element['#node']->nid .'/'. $element['#field_name']);
   }
-  return $output;
+
+  return array(
+    'data' => $flushed_data,
+    'links' => $links,
+  );
 }
+
 
 /**
  * Format cell for display
