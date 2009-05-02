@@ -1,3 +1,15 @@
+/* Display settings */
+.matrix-table {
+}
+
+.matrix-first-col {
+  font-weight:bold;
+}
+
+.matrix-links {
+}
+
+/* Administration settings */
 .matrix-settings-title,
 .matrix-settings-type,
 .matrix-settings-edit {
@@ -19,3 +31,4 @@
 #matrix-clear {
   clear:both;
 }
+

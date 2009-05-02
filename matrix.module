@@ -426,6 +426,8 @@ function matrix_process($element, $edit, &$form_state, $form) {
     '#first_col' => $first_col
   );
   //build out the appropriate form element
+  //print_r($element);
+  //print_r($form['#node'][$element['#field_name']]);
   foreach ($rows as $row_id => $row) {
     foreach ($cols as $col_id => $col) { 
       //get default value    
@@ -434,6 +436,9 @@ function matrix_process($element, $edit, &$form_state, $form) {
       }
       else if (isset($form['#field_info'][$element['#field_name']]['widget']['default_value'][0][$row_id][$col_id])) { //cck default value
         $default = $form['#field_info'][$element['#field_name']]['widget']['default_value'][0][$row_id][$col_id];
+      }
+      else if (isset($form['#node'][$element['#field_name']][0][$row_id][$col_id])) {
+        $default = $form['#node'][$element['#field_name']][0][$row_id][$col_id];
       }
       else {
         $default = $element['#rows_elements'][$row_id]['#default_value']; //form element value
@@ -593,7 +598,9 @@ function theme_matrix_formatter_default($element) {
   $prepared = matrix_format_prepare($field_info);
   //if you want to customize the formatting, manipulate $prepared['data'] before passing it to theme('matrix_table'...)
   $output = theme('matrix_table', $prepared['data']);
-  $output .=  $prepared['links']; //eg export link
+  
+  (array)$prepared['links'];
+  $output .=  '<div class="matrix-links">'. implode("<br />", $prepared['links']) .'</div>'; //eg export link
   
   return $output;
 }
@@ -611,6 +618,7 @@ function theme_matrix_formatter_default($element) {
  */
 function theme_matrix_table($data, $attributes = array(), $caption = NULL) {
   $header = array_shift($data);
+  $attributes['class'] += " matrix-table"; 
   return theme('table', $header, $data, $attributes, $caption);
 }
 /**
@@ -675,7 +683,7 @@ function matrix_format_prepare($field_info, $item = null) {
         $show_row = $row_index;
       }
     }
-    $row_label =  '<b>'. array_shift($rows_header) .'</b>';
+    $row_label =  '<div class="matrix-first-col">'. array_shift($rows_header) .'</div>';
     array_unshift($data[$row_index], $row_label); 
   }
   //add blank cells if the number of rows/columns is different to the number of headers
@@ -761,7 +769,7 @@ function _matrix_format_cell($element_type, $cell_value, $calc_data = NULL) {
           return min($calc_data['data']);
           
         case 'max':
-         // return max($calc_data['data']);
+          return max($calc_data['data']);
           
         case 'mode':
       
