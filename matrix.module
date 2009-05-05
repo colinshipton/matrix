@@ -45,11 +45,10 @@ function matrix_menu() {
     'file' => 'admin.inc',
     'type' => MENU_CALLBACK,
   );
-  $items['matrix/example'] = array(
-    'title' => 'Example use of matrix as a form element',
-    'page callback' => 'drupal_get_form',
-    'page arguments' => array('matrix_example'),
-    'access arguments' => array('export matrix'),
+  $items['matrix/ahah'] = array(
+    'title' => 'Add ability to add extra rows/colums with AHAH',
+    'page callback' => 'matrix_ahah',
+    'access arguments' => array('access content'),
     'type' => MENU_CALLBACK,
   );
   return $items;
@@ -423,11 +422,24 @@ function matrix_process($element, $edit, &$form_state, $form) {
     '#mode' => $element['#mode'],
     '#element_validate' => $element['#element_validate'],
     '#header' => $header,
-    '#first_col' => $first_col
+    '#first_col' => $first_col,
+    '#prefix' => '<div id="matrix-wrapper">'. $element['#prefix'],
+    '#suffix' => $element['#suffix'] .'</div>',
   );
+  
+  if ($element['#ahah_enabled']) {
+    $processed_element['matrix_more'] = array (
+      '#type' => 'button',
+      '#value' => t('Add more '. $element['#mode']),
+      '#ahah' => array(
+        'path' => 'matrix/ahah',
+        'wrapper' => 'matrix-wrapper',
+        'method' => 'replace',
+        'effect' => 'fade',
+      ),
+    );      
+  }
   //build out the appropriate form element
-  //print_r($element);
-  //print_r($form['#node'][$element['#field_name']]);
   foreach ($rows as $row_id => $row) {
     foreach ($cols as $col_id => $col) { 
       //get default value    
@@ -599,8 +611,9 @@ function theme_matrix_formatter_default($element) {
   //if you want to customize the formatting, manipulate $prepared['data'] before passing it to theme('matrix_table'...)
   $output = theme('matrix_table', $prepared['data']);
   
-  (array)$prepared['links'];
-  $output .=  '<div class="matrix-links">'. implode("<br />", $prepared['links']) .'</div>'; //eg export link
+  if (is_array($prepared['links'])) {
+    $output .=  '<div class="matrix-links">'. implode("<br />", $prepared['links']) .'</div>'; //eg export link
+  }
   
   return $output;
 }
@@ -617,9 +630,14 @@ function theme_matrix_formatter_default($element) {
  * @return HTML 
  */
 function theme_matrix_table($data, $attributes = array(), $caption = NULL) {
-  $header = array_shift($data);
-  $attributes['class'] += " matrix-table"; 
-  return theme('table', $header, $data, $attributes, $caption);
+  if (is_array($data)) {
+    $header = array_shift($data);
+    $attributes['class'] += " matrix-table"; 
+    return theme('table', $header, $data, $attributes, $caption);
+  }
+  else {
+    return "";
+  }
 }
 /**
  * Prepare the data to be rendered.
@@ -627,6 +645,7 @@ function theme_matrix_table($data, $attributes = array(), $caption = NULL) {
  * @return array containing the header, first col, and the data
  */
 function matrix_format_prepare($field_info, $item = null) {
+  $links = array();
   $rows_elements = unserialize($field_info['rows_elements']);
   $cols_elements = unserialize($field_info['cols_elements']);
   $mode = $field_info['mode'];
@@ -707,7 +726,7 @@ function matrix_format_prepare($field_info, $item = null) {
   }
 
   if (user_access('export matrix')) {
-    $links = l(t('Export data'), 'matrix/export/'. $element['#node']->nid .'/'. $element['#field_name']);
+    $links[] = l(t('Export data'), 'matrix/export/'. $element['#node']->nid .'/'. $element['#field_name']);
   }
 
   return array(
@@ -818,4 +837,38 @@ function matrix_export($nid, $field_name) {
     echo $output;
     die();
   }
+}
+
+/**
+ * Implementation of hook_views_api
+ */
+function matrix_views_api() {
+  return array(
+    'api' => '2.0',
+    'path' => drupal_get_path('module', 'matrix'),
+  );
+}
+
+/**
+ *  Menu callback for AHAH form().
+ */
+function matrix_ahah() {
+  $form_state = array('storage' => NULL, 'submitted' => FALSE);
+  $form_build_id = $_POST['form_build_id'];
+  $form = form_get_cache($form_build_id, $form_state);
+
+  $args = $form['#parameters'];
+  $form_id = array_shift($args);
+  $form_state['post'] = $form['#post'] = $_POST;
+  $form['#programmed'] = $form['#redirect'] = FALSE;
+  
+  drupal_process_form($form_id, $form, $form_state);
+  $form = drupal_rebuild_form($form_id, $form_state, $args, $form_build_id);
+
+  $choice_form = $form['choice_wrapper']['choice'];
+  unset($choice_form['#prefix'], $choice_form['#suffix']);
+  $output = theme('status_messages') . drupal_render($choice_form);
+
+  // Final rendering callback.
+  drupal_json(array('status' => TRUE, 'data' => $output));
 }
