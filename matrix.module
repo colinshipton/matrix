@@ -421,16 +421,17 @@ function matrix_process($element, $edit, &$form_state, $form) {
     '#delta' => $element['#delta'],
     '#mode' => $element['#mode'],
     '#element_validate' => $element['#element_validate'],
-    '#header' => $header,
-    '#first_col' => $first_col,
+    '#rows_elements' => $rows,
+    '#cols_elements' => $cols,
     '#prefix' => '<div id="matrix-wrapper">'. $element['#prefix'],
     '#suffix' => $element['#suffix'] .'</div>',
   );
   
   if ($element['#ahah_enabled']) {
+    $mode = ($element['#mode'] == 'rows') ? t('columns') : t('rows');
     $processed_element['matrix_more'] = array (
       '#type' => 'button',
-      '#value' => t('Add more '. $element['#mode']),
+      '#value' => t('Add more %type', array('%type' => $mode)),
       '#ahah' => array(
         'path' => 'matrix/ahah',
         'wrapper' => 'matrix-wrapper',
@@ -439,6 +440,8 @@ function matrix_process($element, $edit, &$form_state, $form) {
       ),
     );      
   }
+
+  $f = $form['#node']->$element['#field_name'];
   //build out the appropriate form element
   foreach ($rows as $row_id => $row) {
     foreach ($cols as $col_id => $col) { 
@@ -446,11 +449,11 @@ function matrix_process($element, $edit, &$form_state, $form) {
       if (isset($element['#value'][$row_id][$col_id])) { //cck value
         $default = $element['#value'][$row_id][$col_id];
       }
+      else if (isset($f[0][$row_id][$col_id])) { //node preview
+        $default = $f[0][$row_id][$col_id];
+      }
       else if (isset($form['#field_info'][$element['#field_name']]['widget']['default_value'][0][$row_id][$col_id])) { //cck default value
         $default = $form['#field_info'][$element['#field_name']]['widget']['default_value'][0][$row_id][$col_id];
-      }
-      else if (isset($form['#node'][$element['#field_name']][0][$row_id][$col_id])) {
-        $default = $form['#node'][$element['#field_name']][0][$row_id][$col_id];
       }
       else {
         $default = $element['#rows_elements'][$row_id]['#default_value']; //form element value
@@ -735,6 +738,7 @@ function matrix_format_prepare($field_info, $item = null) {
  * @return HTML string
  */
 function matrix_format_prepare_links($nid, $field_name) {
+  $links = array();
   if (user_access('export matrix')) {
     $links[] = l(t('Export data'), 'matrix/export/'. $nid .'/'. $field_name);
   }
