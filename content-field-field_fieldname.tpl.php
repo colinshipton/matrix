@@ -41,8 +41,10 @@
           <?php } ?>
           <?php
             $prepared = matrix_format_prepare($field, $item);
-            //if you want to customize the formatting, manipulate $prepared['data'] before passing it to theme('matrix_table'...)
-            foreach ($prepared['data'] as $row_index => $row) {
+            $links = matrix_format_prepare_links($node->nid, $field_name);
+            
+            //if you want to customize the formatting, manipulate $prepared before passing it to theme('matrix_table'...)
+            foreach ($prepared as $row_index => $row) {
               foreach ($row as $column_index => $cell_value) {
                 if ($row_index > 0 && $column_index > 0) {
                   $manipulated_data[$row_index][$column_index] = "<div style='color:red'>$cell_value</div>";
@@ -54,7 +56,7 @@
             }
             
             print theme('matrix_table', $manipulated_data);
-            print  $prepared['links']; //eg export link
+            print $links; //eg export link
           ?>
         </div>
       <?php $count++;

@@ -608,12 +608,11 @@ function theme_matrix_formatter_default($element) {
   $field_info = $element['#node']->$element['#field_name'];
   
   $prepared = matrix_format_prepare($field_info);
-  //if you want to customize the formatting, manipulate $prepared['data'] before passing it to theme('matrix_table'...)
-  $output = theme('matrix_table', $prepared['data']);
+  $links = matrix_format_prepare_links($element['#node']->nid, $element['#field_name']);
   
-  if (is_array($prepared['links'])) {
-    $output .=  '<div class="matrix-links">'. implode("<br />", $prepared['links']) .'</div>'; //eg export link
-  }
+  //if you want to customize the formatting, manipulate $prepared before passing it to theme('matrix_table'...)
+  $output  = theme('matrix_table', $prepared);
+  $output .=  '<div class="matrix-links">'. $links .'</div>'; //eg export link
   
   return $output;
 }
@@ -725,16 +724,23 @@ function matrix_format_prepare($field_info, $item = null) {
     }
   }
 
-  if (user_access('export matrix')) {
-    $links[] = l(t('Export data'), 'matrix/export/'. $element['#node']->nid .'/'. $element['#field_name']);
-  }
-
-  return array(
-    'data' => $flushed_data,
-    'links' => $links,
-  );
+  return $flushed_data;
 }
 
+/**
+ * Prepare any special links (eg export link)
+ * @param $nid Node ID
+ * @param  $field_name the name of the field
+ *
+ * @return HTML string
+ */
+function matrix_format_prepare_links($nid, $field_name) {
+  if (user_access('export matrix')) {
+    $links[] = l(t('Export data'), 'matrix/export/'. $nid .'/'. $field_name);
+  }
+
+  return implode("<br />", $links);
+}
 
 /**
  * Format cell for display
