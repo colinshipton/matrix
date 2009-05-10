@@ -51,6 +51,13 @@ function matrix_menu() {
     'access arguments' => array('access content'),
     'type' => MENU_CALLBACK,
   );
+  $items['matrix/example'] = array(
+    'title' => 'Example use of matrix as a form element',
+    'page callback' => 'drupal_get_form',
+    'page arguments' => array('matrix_example'),
+    'access arguments' => array('access content'),
+    'type' => MENU_CALLBACK,
+  );
   return $items;
 }
 
@@ -183,6 +190,11 @@ function matrix_field_settings($op, $field) {
       $values[] = 'rows_elements';
       $values[] = 'cols_elements';
       return $values;
+      
+    case 'delete':
+      db_query("DELETE FROM {node_field_matrix_data} WHERE field_name= '%s'", $field['field_name']);
+      drupal_set_message('deleted');
+      return;
   }
 }
 
@@ -350,8 +362,8 @@ function theme_matrix_table_form($form) {
     }
   }
   
-  $output = drupal_render($form);
-  $output .= theme('table', $header, $rows, array('class' => 'matrix'));
+  $output = theme('table', $header, $rows, array('class' => 'matrix'));
+  $output .= drupal_render($form);
   return theme('form_element', $form, $output);
 }
 
@@ -423,23 +435,11 @@ function matrix_process($element, $edit, &$form_state, $form) {
     '#element_validate' => $element['#element_validate'],
     '#rows_elements' => $rows,
     '#cols_elements' => $cols,
+    '#header' => $header,
+    '#first_col' => $first_col,
     '#prefix' => '<div id="matrix-wrapper">'. $element['#prefix'],
     '#suffix' => $element['#suffix'] .'</div>',
   );
-  
-  if ($element['#ahah_enabled']) {
-    $mode = ($element['#mode'] == 'rows') ? t('columns') : t('rows');
-    $processed_element['matrix_more'] = array (
-      '#type' => 'button',
-      '#value' => t('Add more %type', array('%type' => $mode)),
-      '#ahah' => array(
-        'path' => 'matrix/ahah',
-        'wrapper' => 'matrix-wrapper',
-        'method' => 'replace',
-        'effect' => 'fade',
-      ),
-    );      
-  }
 
   $f = $form['#node']->$element['#field_name'];
   //build out the appropriate form element
@@ -468,6 +468,20 @@ function matrix_process($element, $edit, &$form_state, $form) {
     }
   }
 
+  if ($element['#ahah_enabled']) {
+    $mode = ($element['#mode'] == 'rows') ? t('columns') : t('rows');
+    $processed_element['matrix_more'] = array (
+      '#type' => 'button',
+      '#parents' => $element['#parents'],
+      '#value' => t('Add more @type', array('@type' => $mode)),
+      '#ahah' => array(
+        'path' => 'matrix/ahah',
+        'wrapper' => 'matrix-wrapper',
+        'method' => 'replace',
+        'effect' => 'fade',
+      ),
+    );      
+  }
   return $processed_element;
 }
 
@@ -859,6 +873,74 @@ function matrix_views_api() {
   );
 }
 
+
+/**
+ * Form Definition
+ */
+function matrix_example() {
+  $form['matrixfield'] = array(
+    '#type' => 'matrix',
+    '#mode' => 'cols',
+    '#title' => 'Example matrix element',
+    '#description' => 'This is how you use it!',
+    '#ahah_enabled' => true,
+    '#cols_elements' => array(
+      array(
+        '#type' => 'textfield',
+        '#title' => 'Textbox 1',
+        '#default_value' => 'One',
+        '#required' => TRUE,
+      ),
+      array(
+        '#type' => 'title',
+        '#title' => 'Title 1',
+      ),
+      array(
+        '#type' => 'select',
+        '#title' => 'Select 1',
+        '#options' => array('one' => 'One', 'two' => 'Two', 'three' => 'Three'),
+        '#default_value' => 'two',
+      ),
+      array(
+        '#type' => 'checkbox',
+        '#title' => 'Checkbox 1',
+        '#default_value' => TRUE,
+      ),
+      array(
+        '#type' => 'radios',
+        '#title' => 'Radios 1',
+        '#options' => array('one' => 'One', 'two' => 'Two', 'three' => 'Three'),
+        '#default_value' => 'two',
+      ),
+    ),
+    '#rows_elements' => array(
+      array(
+        '#title' => 'Row 1'
+      ),
+      array(
+        '#title' => 'Row 2'
+      ),
+      array(
+        '#title' => 'Row 3'
+      ),      
+    ),
+  );
+  $form['submit'] = array(
+    '#type' => 'submit',
+    '#value' => t('Submit')
+  );
+  return $form;
+}
+
+/**
+ * Implementation of hook_submit()
+ */
+function matrix_example_submit($form_id, $form_state) {
+  print_r($form_state['values']['matrixfield']);
+  die();
+}
+
+
 /**
  *  Menu callback for AHAH form().
  */
@@ -867,18 +949,38 @@ function matrix_ahah() {
   $form_build_id = $_POST['form_build_id'];
   $form = form_get_cache($form_build_id, $form_state);
 
+  form_matrix_rebuild($form_id, $form, $form_state); //rebuild the matrix part of the form. 
+  
   $args = $form['#parameters'];
   $form_id = array_shift($args);
   $form_state['post'] = $form['#post'] = $_POST;
   $form['#programmed'] = $form['#redirect'] = FALSE;
   
+ // if (strpos($form_state['post']['op'], t('Add more'))
+  $element_id = $fd;
+  print_r($form_state);
   drupal_process_form($form_id, $form, $form_state);
-  $form = drupal_rebuild_form($form_id, $form_state, $args, $form_build_id);
+ // $form = drupal_rebuild_form($form_id, $form_state, $args, $form_build_id);
 
-  $choice_form = $form['choice_wrapper']['choice'];
-  unset($choice_form['#prefix'], $choice_form['#suffix']);
-  $output = theme('status_messages') . drupal_render($choice_form);
+//  $choice_form = $form['choice_wrapper']['choice'];
+  //unset($choice_form['#prefix'], $choice_form['#suffix']);
+  //$output = theme('status_messages') . drupal_render($choice_form);
 
   // Final rendering callback.
   drupal_json(array('status' => TRUE, 'data' => $output));
+}
+
+/**
+ * Process the matrix form from the ahah callback
+ * Ideally this work should be done in the original form definition (as per AHAH zen http://drupal.org/node/331941)
+ * but this is not an option for CCK
+ *
+ * @param $element_id The internal id (name) of the matrix element in question.
+ * @param $form
+ * @param $form_state
+ *
+ * modifies $form by reference.
+ */
+function form_matrix_rebuild($element_id, &$form, $form_state) {
+  unset($form[$element_id]);
 }

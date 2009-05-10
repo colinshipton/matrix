@@ -44,7 +44,9 @@
             $links = matrix_format_prepare_links($node->nid, $field_name);
             
             //if you want to customize the formatting, manipulate $prepared before passing it to theme('matrix_table'...)
+            //ksort($prepared); //for some installs the data shows backwards.  if you experience this behavior, uncomment this line
             foreach ($prepared as $row_index => $row) {
+              //ksort($row); //for some installs the data shows backwards.  if you experience this behavior, uncomment this line
               foreach ($row as $column_index => $cell_value) {
                 if ($row_index > 0 && $column_index > 0) {
                   $manipulated_data[$row_index][$column_index] = "<div style='color:red'>$cell_value</div>";
