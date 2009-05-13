@@ -115,6 +115,7 @@ function matrix_field_settings($op, $field) {
       cache_set('matrix-cols-'. $field['field_name'], unserialize($field['cols_elements']));
       
       $mode = !empty($field['mode']) ? $field['mode'] : 'cols';
+      $empty = !empty($field['empty']) ? $field['empty'] : '-';
       
       $form['mode'] = array(
         '#type' => 'radios',
@@ -122,6 +123,13 @@ function matrix_field_settings($op, $field) {
         '#options' => array('cols' => t('Columns define element types'), 'rows' => t('Rows define element types')),
         '#default_value' => $mode,
         '#description' => t('You can define element types (eg text fields, select boxes) for each cell in the grid.  Choose if the columns or the rows will decide the element types'),
+      );  
+      $form['empty'] = array(
+        '#type' => 'textfield',
+        '#title' => t('Empty cell'),
+        '#size' => 2,
+        '#default_value' => $empty,
+        '#description' => t('Place holder for blank cells'),
       );  
       $form['cols'] = array(
         '#type' => 'fieldset',
@@ -187,14 +195,10 @@ function matrix_field_settings($op, $field) {
       cache_clear_all('matrix-rows-'. $field['field_name'], 'cache'); 
       cache_clear_all('matrix-cols-'. $field['field_name'], 'cache'); 
       $values[] = 'mode';
+      $values[] = 'empty';
       $values[] = 'rows_elements';
       $values[] = 'cols_elements';
       return $values;
-      
-    case 'delete':
-      db_query("DELETE FROM {node_field_matrix_data} WHERE field_name= '%s'", $field['field_name']);
-      drupal_set_message('deleted');
-      return;
   }
 }
 
@@ -274,6 +278,8 @@ function matrix_field($op, &$node, $field, &$items, $teaser, $page) {
       $values['rows_elements'] = $field['rows_elements'];
       $values['cols_elements'] = $field['cols_elements'];
       $values['mode'] = $field['mode'];
+      $values['empty'] = $field['empty'];
+      
       $additions = array($field['field_name'] => $values);
       return $additions;
     case 'update':
@@ -667,6 +673,7 @@ function matrix_format_prepare($field_info, $item = null) {
   $rows_elements = unserialize($field_info['rows_elements']);
   $cols_elements = unserialize($field_info['cols_elements']);
   $mode = $field_info['mode'];
+  $empty = $field_info['empty'];
   
   //if there is no data, just return
   if (!is_array($rows_elements) || !is_array($cols_elements)) {
@@ -715,8 +722,8 @@ function matrix_format_prepare($field_info, $item = null) {
        $calc_data = array('calc_method' => $cols_elements[$col_index]['#calc_method'], 'data' =>  $calcdata_rows[$row_index]);
       }
       
-      $data[$row_index][$col_index] = _matrix_format_cell($element_type, $cell_value, $calc_data);
-      if ($data[$row_index][$col_index] != '-') {
+      $data[$row_index][$col_index] = _matrix_format_cell($element_type, $cell_value, $empty, $calc_data);
+      if ($data[$row_index][$col_index] != $empty) {
         $show_row = $row_index;
       }
     }
@@ -729,11 +736,10 @@ function matrix_format_prepare($field_info, $item = null) {
   if ($row_count < count($header)) {
     for ($i = $row_count; $i < count($header); $i++) {
       for ($j = 0; $j < count($data); $j++) {
-        $data[$j][$i] = '-';
+        $data[$j][$i] = $empty;
       }
     }
   }
-  
   $flushed_data[] = $header;
   
   //strip out rows at the end of the dataset where there is no data
@@ -744,7 +750,7 @@ function matrix_format_prepare($field_info, $item = null) {
   }
   
   //return false if there is no data to display
-  if ($show_row > 0) {
+  if (isset($show_row)) {
     return $flushed_data;
   }
   else {
@@ -772,18 +778,19 @@ function matrix_format_prepare_links($nid, $field_name) {
  * Format cell for display
  * @param $element_type string The type of element in the cell in question
  * @param $cell_value string The value of the cell
+ * @param $empty string Placeholder for empty cells
  * @param $calc_data array Data used for calculation fields
  *
  * @return Formatted cell
  */
-function _matrix_format_cell($element_type, $cell_value, $calc_data = NULL) {
+function _matrix_format_cell($element_type, $cell_value, $empty, $calc_data = NULL) {
   switch ($element_type) {
     case 'textfield':
     case 'select':
     case 'radios':
     default:
       if ($cell_value == '') {
-        return '-';
+        return $empty;
       }
       else {
         return $cell_value;
