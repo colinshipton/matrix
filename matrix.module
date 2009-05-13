@@ -610,7 +610,7 @@ function hook_matrixvalidate($fieldname, $element, $row_index, $col_index) {
 function matrix_field_formatter_info() {
   return array(
     'default' => array(
-      'label' => t('Title, as matrix (default)'),
+      'label' => t('Table'),
       'field types' => array('matrix'),
     ),
   );
@@ -625,13 +625,15 @@ function theme_matrix_formatter_default($element) {
   $field_info = $element['#node']->$element['#field_name'];
   
   $prepared = matrix_format_prepare($field_info);
-  $links = matrix_format_prepare_links($element['#node']->nid, $element['#field_name']);
   
-  //if you want to customize the formatting, manipulate $prepared before passing it to theme('matrix_table'...)
-  $output  = theme('matrix_table', $prepared);
-  $output .=  '<div class="matrix-links">'. $links .'</div>'; //eg export link
-  
-  return $output;
+  if ($prepared) {
+    $links = matrix_format_prepare_links($element['#node']->nid, $element['#field_name']);
+    //if you want to customize the formatting, manipulate $prepared before passing it to theme('matrix_table'...)
+    $output  = theme('matrix_table', $prepared);
+    $output .=  '<div class="matrix-links">'. $links .'</div>'; //eg export link
+    
+    return $output;
+  }
 }
 
 /**
@@ -740,8 +742,14 @@ function matrix_format_prepare($field_info, $item = null) {
       $flushed_data[] = $row;
     }
   }
-
-  return $flushed_data;
+  
+  //return false if there is no data to display
+  if ($show_row > 0) {
+    return $flushed_data;
+  }
+  else {
+    return FALSE;
+  }
 }
 
 /**
