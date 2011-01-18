@@ -2,5 +2,10 @@
 name = Matrix Field
 description = Defines field type for table with textfields.
 package = CCK
-core = 6.x
-dependencies[] = content
+core = 7.x
+dependencies[] = field
+files[] = matrix.module
+files[] = matrix.admin.inc
+files[] = views/materix.views.inc
+files[] = views/views_handler_field_field_matrix.inc
+files[] = views/matrix_handler_filter.inc
