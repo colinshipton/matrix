@@ -1,4 +1,3 @@
-; $Id$
 name = Matrix Field
 description = Defines field type for table with textfields.
 package = CCK

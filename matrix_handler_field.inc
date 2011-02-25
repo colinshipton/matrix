@@ -1,5 +1,4 @@
 <?php
-// $Id$
 
 /**
  * Field handler to present the Matrix field to the user.

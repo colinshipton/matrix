@@ -1,5 +1,4 @@
 <?php
-// $Id$
 
 /**
  * A field that displays fields.
