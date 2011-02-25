@@ -1,5 +1,4 @@
 <?php
-// $Id$
 
 define('NUMBER', 10);
 
