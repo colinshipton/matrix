@@ -183,7 +183,8 @@ function matrix_field_settings_form_custom($field, $instance, $has_data) {
     if ($settings['cols_count'] > 0 && $settings['rows_count'] > 0) {
       $form['preview']['define'] = array(
         '#type' => 'select',
-        '#title' => t('Fields are defined in'),
+        '#title' => t('Field type are defined by'),
+        '#description' => t('Choose if columns or rows should choose the type of field (checkbox, textfield, select, etc)'),
         '#options' => array(
           'rows' => t('Rows'),
           'cols' => t('Columns'),
@@ -419,7 +420,7 @@ function matrix_field_settings_form_custom($field, $instance, $has_data) {
       $form['preview']['form'][$axis][$cell]['select']['allowed_values_function'] = array(
         '#type' => 'select',
         '#title' => t('Allowed values function'),
-        '#description' => t('Instead of using a list of allowed values, you may specify a php function which should return an array of values.'),
+        '#description' => t('Instead of using a list of allowed values, you may use values specified by a php function. See the documentation on how to use this feature.'),
         '#options' => $functions['allowed_values'],
         '#default_value' => $field_settings['select']['allowed_values_function'],
         '#states' => array(
@@ -462,7 +463,7 @@ function matrix_field_settings_form_custom($field, $instance, $has_data) {
       $form['preview']['form'][$axis][$cell]['radios']['allowed_values_function'] = array(
         '#type' => 'select',
         '#title' => t('Allowed values function'),
-        '#description' => t('Instead of using a list of allowed values, you may specify a php function which should return an array of values.'),
+        '#description' => t('Instead of using a list of allowed values, you may use values specified by a php function. See the documentation on how to use this feature.'),
         '#options' => $functions['allowed_values'],
         '#default_value' => $field_settings['radios']['allowed_values_function'],
         '#states' => array(
@@ -505,7 +506,7 @@ function matrix_field_settings_form_custom($field, $instance, $has_data) {
       $form['preview']['form'][$axis][$cell]['checkboxes']['allowed_values_function'] = array(
         '#type' => 'select',
         '#title' => t('Allowed values function'),
-        '#description' => t('Instead of using a list of allowed values, you may specify a php function which should return an array of values.'),
+        '#description' => t('Instead of using a list of allowed values, you may use values specified by a php function. See the documentation on how to use this feature.'),
         '#options' => $functions['allowed_values'],
         '#default_value' => $field_settings['checkboxes']['allowed_values_function'],
         '#states' => array(
@@ -585,7 +586,7 @@ function matrix_field_settings_form_custom($field, $instance, $has_data) {
         '#type' => 'select',
         '#options' => $functions['calculation'],
         '#title' => t('Custom PHP function for processing'),
-        '#description' => t('Custom php function which should be used for processing. It should take the parmeters $column and $row and return a string.'),
+        '#description' => t('Custom php function which should be used for processing. See the documentation for details on how to use this feature.'),
         '#default_value' => $field_settings['custom']['custom'],
         '#states' => array(
           'visible' => array(
@@ -677,5 +678,12 @@ function matrix_form_field_ui_field_edit_form_alter(&$form, &$form_state, $form_
   $form['field']['cardinality'] = array(
     '#type' => 'value',
     '#value' => FIELD_CARDINALITY_UNLIMITED,
+  );
+  
+  //The module can only work if required is set to FALSE.
+  //Depending on the widget, the required attribute is controlled seperately
+  $form['instance']['required'] = array(
+    '#type' => 'value',
+    '#value' => FALSE,
   );
 }

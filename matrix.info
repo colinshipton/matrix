@@ -1,3 +1,4 @@
+; $Id: matrix.info,v 1.2.2.1.4.1 2011/01/18 10:10:05 aaron1234nz Exp $
 name = Matrix Field
 description = Defines field type for table with textfields.
 package = CCK
