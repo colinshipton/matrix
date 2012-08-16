@@ -1,21 +1,35 @@
 <?php
+// $Id: matrix.install,v 1.2.4.2.2.3.2.1 2011/01/18 10:10:05 aaron1234nz Exp $
 
 /**
- * Implementation of hook_install().
+ * @file
+ * Install, update and uninstall functions for the matrix module.
  */
-function matrix_install() {
-  switch ($GLOBALS['db_type']) {
-    case 'mysql':
-    case 'mysqli':
-      db_query("CREATE TABLE {node_field_matrix_data} (
-          nid int unsigned NOT NULL default '0',
-          vid int unsigned NOT NULL default '0',
-          field_name varchar(32) NOT NULL default '',
-          row int unsigned NOT NULL default '0',
-          col int unsigned NOT NULL default '0',
-          value varchar(255) NOT NULL default '',
-          PRIMARY KEY  (vid,field_name,row,col)
-        ) /*!40100 DEFAULT CHARACTER SET utf8 */;");
-      break;
-  }
+
+/**
+ * Implements hook_field_schema().
+ */
+function matrix_field_schema($field) {
+  return array(
+    'columns' => array(
+      'row' => array(
+        'type' => 'int',
+        'not null' => FALSE,
+      ),
+      'col' => array(
+        'type' => 'int',
+        'not null' => FALSE,
+      ),
+      'value' => array(
+        'type' => 'varchar',
+        'length' => 255,
+        'not null' => FALSE,
+      ),
+    ),
+    'indexes' => array(
+      'row' => array('row'),
+      'col' => array('col'),
+      'value' => array('value'),
+    ),
+  );
 }
