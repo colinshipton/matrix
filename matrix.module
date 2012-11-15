@@ -599,7 +599,7 @@ function matrix_op(&$form_state) {
 function matrix_field_widget_validate($element, &$form_state) {
   list($field_name, $value) = matrix_op($form_state);
   
-  if (isset($form_state['values']['op']) && $form_state['values']['op'] == t('Save')) {
+  if (isset($form_state['values']['op'])) {
     $rows_count = $element['#matrix_rows'];
     $cols_count = $element['#matrix_cols'];
     $delta = 0;
