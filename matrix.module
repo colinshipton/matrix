@@ -828,7 +828,7 @@ function matrix_cell_value($item, $field) {
       $field_settings = $settings['rows'][$item['row']];
     }
     else {
-      $field_settings = $settings['col'][$item['col']];
+      $field_settings = $settings['cols'][$item['col']];
     }
 
     //determine the value to return
