@@ -31,6 +31,10 @@ function matrix_theme() {
   $theme['matrix_table'] = array(
     'render element' => 'form',
   );
+  $theme['matrix_output'] = array(
+    'variables' => array('header' => NULL, 'rows' => NULL),
+  );
+  
   return $theme;
 }
 
@@ -547,6 +551,13 @@ function theme_matrix_table($variables) {
 }
 
 /**
+ * Theme a set of elements into a table
+ */
+function theme_matrix_output($variables) {
+  return theme('table', array('header' => $variables['header'], 'rows' => $variables['rows']));
+}
+
+/**
  * Validate the required attribute of a cell
  * standard #requied cannot be used because:
  * - It should not be invoked during ajax calls
@@ -788,7 +799,7 @@ function matrix_field_formatter_view($entity_type, $entity, $field, $instance, $
       }
 
       $element[0] = array(
-        '#theme' => 'table', 
+        '#theme' => 'matrix_output', 
         '#header' => $headers, 
         '#rows' => $rows,
       );
