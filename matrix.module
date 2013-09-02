@@ -113,15 +113,13 @@ function matrix_field_settings_form($field, $instance, $has_data) {
  * Implementation of hook_content_is_empty().
  */
 function matrix_field_is_empty($item, $field) {
-  if (is_array($item)) {
-    foreach ($item as $delta => $item) {
-      if (!empty($item['value'])) {
-        return FALSE;
-      }
+  if (is_array($item) && array_key_exists('value', $item)) {       
+    if (empty($item['value']) && (string) $item['value'] !== '0') {
+      return TRUE;
     }
-    return TRUE;
+    return FALSE;
   }
-  return TRUE;
+  return TRUE; 
 }
 
 /**
