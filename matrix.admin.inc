@@ -58,7 +58,12 @@ function matrix_field_settings_form_custom($field, $instance, $has_data) {
   $saved_settings = (array)$field['settings'];
   $posted_settings = isset($_POST['field']['settings']) ? $_POST['field']['settings'] : array();
   $settings = array_merge($saved_settings, $posted_settings);
-  $cached_settings = cache_get('matrix-cache-'. $user->uid, 'cache');
+  
+  $field_name = $field['field_name'];
+  $cache_id = sprintf('matrix-cache-%s-%s', $field_name, $user->uid);
+  
+  $cached_settings = cache_get($cache_id, 'cache');
+  
   if (isset($cached_settings->data)) {
     $settings['storage'] = $cached_settings->data;
   }
@@ -628,7 +633,7 @@ function matrix_field_settings_form_custom($field, $instance, $has_data) {
   $settings['storage']['old_define'] = $settings['define'];
   $settings['storage']['old_rows_count'] = $settings['rows_count'];
   $settings['storage']['old_cols_count'] = $settings['cols_count'];
-  cache_set('matrix-cache-'. $user->uid,  $settings['storage'], 'cache', CACHE_TEMPORARY);
+  cache_set($cache_id,  $settings['storage'], 'cache', CACHE_TEMPORARY);
   return $form;
 }
 
