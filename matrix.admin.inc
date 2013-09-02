@@ -146,7 +146,7 @@ function matrix_field_settings_form_custom($field, $instance, $has_data) {
     '#required' => TRUE,
     '#size' => 3,
     '#ajax' => array(
-      'callback' => 'matrix_settings_ajax_callback',
+      'callback' => 'matrix_settings_ajax_full_callback',
       'wrapper' => 'matrix-settings-ajax',
     ),
   );
@@ -158,7 +158,7 @@ function matrix_field_settings_form_custom($field, $instance, $has_data) {
     '#size' => 3,
     '#default_value' => $settings['rows_count'],
     '#ajax' => array(
-      'callback' => 'matrix_settings_ajax_callback',
+      'callback' => 'matrix_settings_ajax_full_callback',
       'wrapper' => 'matrix-settings-ajax',
     ),
   );
@@ -191,7 +191,7 @@ function matrix_field_settings_form_custom($field, $instance, $has_data) {
         ),
         '#default_value' => $settings['define'],
         '#ajax' => array(
-          'callback' => 'matrix_settings_ajax_callback',
+          'callback' => 'matrix_settings_ajax_full_callback',
           'wrapper' => 'matrix-settings-ajax',
         ),
       );
@@ -257,20 +257,27 @@ function matrix_field_settings_form_custom($field, $instance, $has_data) {
     //generate form items for managing the configuration
     for ($i = 1; $i <= $setup['cols']['count']; $i++) {
       if ($setup['cols']['config'] != 'none') {
+        $wrapper_id = sprintf('matrix-settings-edit-col-%s', $i);
+        
         $form['preview']['cols'][$i]['button'] = array(
           '#type' => 'button',
           '#name' => 'matrix-settings-form-cols-'. $i,
           '#value' => t('Change settings'),
           '#config_type' => $setup['cols']['config'],
           '#ajax' => array(
-            'callback' => 'matrix_settings_ajax_callback',
-            'wrapper' => 'matrix-settings-ajax',
+            'callback' => 'matrix_settings_ajax_edit_callback',
+            'wrapper' => $wrapper_id,
           ),
         );
         $form['preview']['cols'][$i]['summary'] = array(
           '#type' => 'item',
           '#title' => isset($settings['storage']['cols'][$i]['title']) ? $settings['storage']['cols'][$i]['title'] : t('&lt;Title not set&gt;'),
           '#markup' => isset($settings['storage']['cols'][$i]['field_type']) ? $matrix_field_types['full'][$settings['storage']['cols'][$i]['field_type']] : t('&lt;Field type not set&gt;'),
+        );
+        $form['preview']['cols'][$i]['edit-wrapper'] = array(
+          '#type'   => 'markup',
+          '#prefix' => sprintf('<div id="%s">', $wrapper_id),
+          '#suffix' => '</div>',
         );
       }
       else {
@@ -286,20 +293,27 @@ function matrix_field_settings_form_custom($field, $instance, $has_data) {
     }
     for ($i = 1; $i <= $setup['rows']['count']; $i++) {
       if ($setup['rows']['config'] != 'none') {
+        $wrapper_id = sprintf('matrix-settings-edit-row-%s', $i);
+        
         $form['preview']['rows'][$i]['button'] = array(
           '#type' => 'button',
           '#name' => 'matrix-settings-form-rows-'. $i,
           '#value' => t('Change settings'),
           '#config_type' => $setup['rows']['config'],
           '#ajax' => array(
-            'callback' => 'matrix_settings_ajax_callback',
-            'wrapper' => 'matrix-settings-ajax',
+            'callback' => 'matrix_settings_ajax_edit_callback',
+            'wrapper' => $wrapper_id,
           ),
-        );          
+        );
         $form['preview']['rows'][$i]['summary'] = array(
           '#type' => 'item',
           '#title' => isset($settings['storage']['rows'][$i]['title']) ? $settings['storage']['rows'][$i]['title'] : t('&lt;Title not set&gt;'),
           '#markup' => isset($settings['storage']['rows'][$i]['field_type']) ? $matrix_field_types['full'][$settings['storage']['rows'][$i]['field_type']] : t('&lt;Field type not set&gt;'),
+        );
+        $form['preview']['rows'][$i]['edit-wrapper'] = array(
+          '#type'   => 'markup',
+          '#prefix' => sprintf('<div id="%s">', $wrapper_id),
+          '#suffix' => '</div>',
         );
       }
       else {
@@ -603,7 +617,7 @@ function matrix_field_settings_form_custom($field, $instance, $has_data) {
         '#name' => 'matrix-settings-save-'. $axis .'-'. $cell,
         '#value' => t('Update'),
         '#ajax' => array(
-          'callback' => 'matrix_settings_ajax_callback',
+          'callback' => 'matrix_settings_ajax_full_callback',
           'wrapper' => 'matrix-settings-ajax',
         ),
       );
@@ -622,7 +636,15 @@ function matrix_field_settings_form_custom($field, $instance, $has_data) {
  * AJAX callback
  * Returns the form for altering the settings of columns/rows
  */
-function matrix_settings_ajax_callback($form, &$form_state) {
+function matrix_settings_ajax_edit_callback($form, &$form_state) {
+  return $form['field']['settings']['preview']['form'];
+}
+
+/**
+ * AJAX callback
+ * Returns the complete grid preview after a large-scale settings update.
+ */
+function matrix_settings_ajax_full_callback($form, &$form_state) {
   return $form['field']['settings']['preview'];
 }
 
@@ -642,14 +664,17 @@ function theme_matrix_preview($variables) {
   $items = array();
   $items[] = ''; // top left cell
   for ($i = 1; $i <= $cols_count; $i++) {
-    $items[] = drupal_render($form['cols'][$i]['summary']) . drupal_render($form['cols'][$i]['button']);
+    $items[] = drupal_render($form['cols'][$i]['summary']) . drupal_render($form['cols'][$i]['button'])
+             . drupal_render($form['cols'][$i]['edit-wrapper']);
   }
   $rows[] = $items;
   
   //render all subsequent rows
   for ($i = 1; $i <= $rows_count; $i++) {
     $items = array();
-    $items[] = drupal_render($form['rows'][$i]['summary']) . drupal_render($form['rows'][$i]['button']);
+    $items[] = drupal_render($form['rows'][$i]['summary']) . drupal_render($form['rows'][$i]['button'])
+             . drupal_render($form['rows'][$i]['edit-wrapper']);
+    
     for ($j = 1; $j <= $cols_count; $j++) {
       $items[] = '';
     }
