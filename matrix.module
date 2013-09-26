@@ -704,17 +704,11 @@ function matrix_field_formatter_view($entity_type, $entity, $field, $instance, $
         $items[$item['row']][$item['col']][] = matrix_cell_value($item, $field);
       }
 
-      //work out how many rows and columns to show
-      // For rows this is rows_count if rows_count > 0, else the number of rows with at least some data in the row.
-      if ($field['settings']['rows_count'] > 0) {
-        $rows_count = $field['settings']['rows_count'];
-      }
-      else {
-        foreach ($items as $row_id => $row) {
-          foreach ($row as $col_id => $value) {
-            if ($value != '') {
-              $rows_count = $row_id;
-            }
+      //work out how many rows and columns to show, which is the number of rows with at least some data in the row.
+      foreach ($items as $row_id => $row) {
+        foreach ($row as $col_id => $value) {
+          if ($value != '') {
+            $rows_count = $row_id;
           }
         }
       }
@@ -779,7 +773,7 @@ function matrix_field_formatter_view($entity_type, $entity, $field, $instance, $
           }
         }
 
-        if ($field['settings']['rows_count'] > 0) { //had left lables so translate the headers one to the right
+        if ($cols_count == (count($headers) + 1)) { //had left lables so translate the headers one to the right
           array_unshift($headers, ''); //cell 0,0
         }
         
