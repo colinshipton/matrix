@@ -161,6 +161,7 @@ function matrix_field_widget_form(&$form, &$form_state, $field, $instance, $lang
       
   $default_values = array();
   foreach ($items as $delta => $item) {
+    if($item && !empty($item['row']))
     $default_values[$item['row']][$item['col']][] = $item['value'];
   }
 
@@ -412,6 +413,7 @@ function matrix_field_widget_form(&$form, &$form_state, $field, $instance, $lang
       'callback' => 'matrix_field_ajax_callback',
       'wrapper' => 'matrix-field-'. $field_name,
     ),
+    '#limit_validation_errors' => array(),
   );
   
   $element['more_cols'] = array(
@@ -422,6 +424,8 @@ function matrix_field_widget_form(&$form, &$form_state, $field, $instance, $lang
       'callback' => 'matrix_field_ajax_callback',
       'wrapper' => 'matrix-field-'. $field_name,
     ),
+    '#limit_validation_errors' => array(),
+
   );
   
   $element['#theme'] = 'matrix_table';
@@ -713,7 +717,7 @@ function matrix_field_formatter_view($entity_type, $entity, $field, $instance, $
         }
       }
 
-      if ($cols_count = $field['settings']['cols_count'] > 0) {
+      if ($field['settings']['cols_count'] > 0) {
         $cols_count = $field['settings']['cols_count'];
       }
       else {
@@ -773,17 +777,24 @@ function matrix_field_formatter_view($entity_type, $entity, $field, $instance, $
           }
         }
 
-        if ($cols_count == (count($headers) + 1)) { //had left lables so translate the headers one to the right
-          array_unshift($headers, ''); //cell 0,0
-        }
-        
+        $have_row_labels = FALSE;
+
         if (!empty($settings['rows'])) {
           foreach ($settings['rows'] as $row_id => $row) {
+            if (!empty($row['title'])) {
+              $have_row_labels = TRUE;
+            }
+
             $cell = array('data' => $row['title'], 'class' => 'matrix-col-header');
+
             if (isset($rows[$row_id])) {
               array_unshift($rows[$row_id], $cell);
             }
           }
+        }
+
+        if ($have_row_labels) { //had left lables so translate the headers one to the right
+          array_unshift($headers, ''); //cell 0,0
         }
       }
       else {
