@@ -17,6 +17,7 @@ function matrix_menu() {
     'description' => 'Custom calculations will be done using this callback',
     'page callback' => 'matrix_custom_calculation_callback',
     'access callback' => TRUE,
+    'type' => MENU_CALLBACK,
   );
   return $items;
 }
