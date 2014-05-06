@@ -710,10 +710,15 @@ function matrix_field_formatter_view($entity_type, $entity, $field, $instance, $
       }
 
       //work out how many rows and columns to show, which is the number of rows with at least some data in the row.
+      // this count algorithm assumes the keys are in order, so make sure they are.
+      ksort($items);
       foreach ($items as $row_id => $row) {
         foreach ($row as $col_id => $value) {
           if ($value != '') {
             $rows_count = $row_id;
+            // if this row has a value, we don't need to keep looking at the rest
+            // of the columns.
+            break;
           }
         }
       }
