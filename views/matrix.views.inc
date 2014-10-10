@@ -7,33 +7,34 @@
  */
 
 /**
- * Implementation of hook_field_views_data_alter()
+ * Implements hook_field_views_data_alter().
  */
 function matrix_field_views_data_alter(&$result, &$field, &$module) {
   if ($module != 'matrix') {
     return;
   }
   $field_name = $field['field_name'];
-  
-  //These make no sence to have so remove them
-  unset($result['field_data_'. $field_name][$field_name .'_row']);
-  unset($result['field_data_'. $field_name][$field_name .'_col']);
-  unset($result['field_data_'. $field_name][$field_name .'_value']['sort']);
-  unset($result['field_revision_'. $field_name][$field_name .'_row']);
-  unset($result['field_revision_'. $field_name][$field_name .'_col']);
-  unset($result['field_revision_'. $field_name][$field_name .'_value']['sort']);
-  
-  //alter some handlers to be matrix specific
-  $result['field_data_'. $field_name]['entity_id']['field']['handler'] = 'matrix_handler_field_field';
-  $result['field_data_'. $field_name][$field_name .'_value']['filter']['handler'] = 'matrix_handler_filter';
-  
-  $result['field_revision_'. $field_name]['revision_id']['field']['handler'] = 'matrix_handler_field_field';
-  $result['field_revision_'. $field_name][$field_name .'_value']['filter']['handler'] = 'matrix_handler_filter';
-  //dsm($result);
+
+  $tables = array('field_data_' . $field_name);
+  if (isset($result['field_revision_' . $field_name])) {
+    $tables[] = 'field_revision_' . $field_name;
+  }
+
+  foreach ($tables as $table) {
+    // There's no reason to be able to select the 'row' or 'col' value.
+    unset($result[$table][$field_name . '_row']);
+    unset($result[$table][$field_name . '_col']);
+    // Nor does it make sense to sort by the individual matrix values, since the
+    // grid is fixed on both axis.
+    unset($result[$table][$field_name . '_value']['sort']);
+
+    $result[$table][$field_name]['field']['handler'] = 'matrix_handler_field_field';
+    $result[$table][$field_name . '_value']['filter']['handler'] = 'matrix_handler_filter';
+  }
 }
 
 /**
- * Implementation of hook_views_handler()
+ * Implements hook_views_handler().
  */
 function matrix_views_handlers() {
   return array(

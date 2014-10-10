@@ -1,54 +1,54 @@
 <?php
-// $Id: views_handler_field_field_matrix.inc,v 1.1.2.1 2011/01/18 10:10:05 aaron1234nz Exp $
+/**
+ * @file
+ * Matrix field handler for views.
+ */
 
 /**
  * A field that displays fields.
  */
 class matrix_handler_field_field extends views_handler_field_field {
+
   function row_list() {
-    $field = $this->definition['field_info'];
-    if ($field['type'] == 'matrix_text' && $field['settings']['spreadsheet_style'] == 1) {
-      for ($i = 1; $i<= $field['settings']['rows_count']; $i++) {
-        $output[$i] = $i;
-      }
-    }
-    elseif ($field['type'] == 'matrix_custom') {
+    $field = $this->field_info;
+
+    $output = array(t('None'));
+
+    if ($field['type'] == 'matrix_custom') {
       $settings = unserialize($field['settings']['settings']);
       foreach ($settings['rows'] as $row_id => $row) {
         $output[$row_id] = t('@title (Row @i)', array('@title' => $row['title'], '@i' => $row_id));
       }
+      // The settings don't always come out in row order so we sort preserving
+      // keys.
+      ksort($output);
     }
     else {
-      for ($i = 1; $i<= $field['settings']['rows_count']; $i++) {
-        $output[$i] =  t('Row @i', array('@i' => $i));
-      }
+      $output = drupal_map_assoc(range(1, $field['settings']['rows_count']));
     }
-    array_unshift($output, t('None'));
     return $output;
   }
-  
+
   function col_list() {
-    $field = $this->definition['field_info'];
-    if ($field['type'] == 'matrix_text' && $field['settings']['spreadsheet_style'] == 1) {
-      for ($i = 1; $i<= $field['settings']['cols_count']; $i++) {
-        $output[$i] = matrix_make_letter($i);
-      }
-    }
-    elseif ($field['type'] == 'matrix_custom') {
+    $field = $this->field_info;
+
+    $output = array(t('None'));
+
+    if ($field['type'] == 'matrix_custom') {
       $settings = unserialize($field['settings']['settings']);
       foreach ($settings['cols'] as $col_id => $col) {
-        $output[$row_id] = t('@title (Column @i)', array('@title' => $col['title'], '@i' => $col_id));
+        $output[$col_id] = t('@title (Col @i)', array('@title' => $col['title'], '@i' => $col_id));
       }
+      // The settings don't always come out in row order so we sort preserving
+      // keys.
+      ksort($output);
     }
     else {
-      for ($i = 1; $i<= $field['settings']['cols_count']; $i++) {
-        $output[$i] =  t('Column @i', array('@i' => $i));
-      }
+      $output = drupal_map_assoc(range(1, $field['settings']['cols_count']));
     }
-    array_unshift($output, t('None'));
     return $output;
   }
-  
+
   function option_definition() {
     $options = parent::option_definition();
 
@@ -58,6 +58,17 @@ class matrix_handler_field_field extends views_handler_field_field {
     $options['col'] = array(
       'default' => 0,
     );
+
+    $options['show_row_headers'] = array(
+      'default' => TRUE,
+      'bool' => TRUE,
+    );
+
+    $options['show_col_headers'] = array(
+      'default' => TRUE,
+      'bool' => TRUE,
+    );
+
     return $options;
   }
 
@@ -65,9 +76,10 @@ class matrix_handler_field_field extends views_handler_field_field {
     parent::options_form($form, $form_state);
 
     unset($form['delta']);
+
     $form['message'] = array(
       '#type' => 'markup',
-      '#markup' => t('To only show one value (rather than the entire matrix) choose the cell below.'),
+      '#markup' => '<p>' . t('To only show one value (rather than the entire matrix) choose the cell below.') . '</p>',
     );
     $form['row'] = array(
       '#title' => t('Row'),
@@ -76,62 +88,76 @@ class matrix_handler_field_field extends views_handler_field_field {
       '#default_value' => $this->options['row'],
       '#description' => t('The row to select the data from'),
     );
+
+    $form['show_row_headers'] = array(
+      '#type' => 'checkbox',
+      '#title' => t("Output the table's header row labels?"),
+      '#default_value' => $this->options['show_row_headers'],
+    );
+
     $form['col'] = array(
       '#title' => t('Column'),
       '#type' => 'select',
       '#options' => $this->col_list(),
       '#default_value' => $this->options['col'],
       '#description' => t('The col to select the data from'),
-    );    
+    );
 
+    $form['show_col_headers'] = array(
+      '#type' => 'checkbox',
+      '#title' => t("Output the table's left column labels?"),
+      '#default_value' => $this->options['show_col_headers'],
+    );
   }
 
-  function render($values) {
-    if (isset($values->_field_data[$this->field_alias])) {
-      // Prepare arguments for rendering based on the objects cached in the
-      // pre-render phase and the display options for this field.
-      $entity_type = $values->_field_data[$this->field_alias]['entity_type'];
-      $entity = $values->_field_data[$this->field_alias]['entity'];
-      $display_entity = clone $entity;
-      $langcode = $this->field_language();
+  /**
+   * Render all or part of the matrix according to the settings.
+   *
+   * Matrix bundles the entire table into the first item/delta slot so this
+   * function only get's called once and is passed a render array.
+   *
+   * Assuming you use the default formatter of course! Alternative formatters
+   * aren't going to work here. So beware!
+   */
+  function render_item($count, $item) {
 
-      // The field we are trying to display is empty, or doesn't exist on
-      // this entity.
-      if (empty($display_entity->{$this->definition['field_name']})) {
-        return '';
+    $element = $item['rendered'];
+
+    if ($this->options['row']) {
+      foreach ($element['#rows'] as $x => $row) {
+        if ($x != $this->options['row']) {
+          unset($element['#rows'][$x]);
+        }
       }
+    }
 
-      // The user wants to render only one value from a multivalue field.
-      // The Field API doesn't support this, so we just hack out the
-      // values we don't want to render.
-      if ($this->options['row'] > 0 && $this->options['col'] > 0) {
-            dsm($this->options);
-        $row = (int) $this->options['row'];
-        $col = (int) $this->options['col'];
-        $raw = $display_entity->{$this->definition['field_name']}[$langcode];
-        foreach ($raw as $delta => $cell) {
-          $data[$cell['row']][$cell['col']][] = $cell['value'];
-        }
-        
-        if (count($data[$row][$col]) > 1) {
-          $display_entity->{$this->definition['field_name']}[$langcode] = array(theme('item_list', array('items' => $data[$row][$col])));
-        }
-        else {
-          $display_entity->{$this->definition['field_name']}[$langcode] = array($data[$row][$col][0]);
+    if ($this->options['col']) {
+      foreach ($element['#rows'] as $x => $row) {
+        foreach ($row as $y => $col) {
+          if ($y && $y != $this->options['col']) {
+            unset($element['#rows'][$x][$y]);
+          }
         }
       }
 
-      $display = array(
-        'type' => $this->options['type'],
-        'settings' => $this->options['settings'],
-        'label' => 'hidden',
-      );
+      foreach ($element['#header'] as $y => $header) {
+        if ($y && $y != $this->options['col']) {
+          unset($element['#header'][$y]);
+        }
+      }
+    }
 
-      $render_array = field_view_field($entity_type, $display_entity, $this->definition['field_name'], $display, $langcode);
-      return drupal_render($render_array);
+    if (!$this->options['show_col_headers']) {
+      foreach ($element['#rows'] as $x => $row) {
+        unset($element['#rows'][$x][0]);
+      }
     }
-    else {
-      return '';
+
+    if (!$this->options['show_row_headers']) {
+      $element['#header'] = array();
     }
+
+    return $element;
+
   }
 }

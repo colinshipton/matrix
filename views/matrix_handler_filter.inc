@@ -12,10 +12,10 @@ class matrix_handler_filter extends views_handler_filter_string {
     $this->value_title = t('Cell');
     $this->value_options = NULL;
   }
-  
+
   function row_list() {
     $field = field_info_field($this->definition['field_name']);
-    
+
     if ($field['type'] == 'matrix_text' && $field['settings']['spreadsheet_style'] == 1) {
       for ($i = 1; $i<= $field['settings']['rows_count']; $i++) {
         $output[$i] = $i;
@@ -35,10 +35,10 @@ class matrix_handler_filter extends views_handler_filter_string {
     array_unshift($output, t('None'));
     return $output;
   }
-  
+
   function col_list() {
     $field = field_info_field($this->definition['field_name']);
-    
+
     if ($field['type'] == 'matrix_text' && $field['settings']['spreadsheet_style'] == 1) {
       for ($i = 1; $i<= $field['settings']['cols_count']; $i++) {
         $output[$i] = matrix_make_letter($i);
@@ -66,7 +66,7 @@ class matrix_handler_filter extends views_handler_filter_string {
 
     return $options;
   }
-  
+
   /**
    * Provide a simple textfield for equality
    */
@@ -74,7 +74,7 @@ class matrix_handler_filter extends views_handler_filter_string {
     if (isset( $this->options['value'])) {
       list($row_default, $col_default, $value_default) = explode('_____', $this->value);
     }
-    
+
     // We have to make some choices when creating this as an exposed
     // filter form. For example, if the operator is locked and thus
     // not rendered, we can't render dependencies; instead we only
@@ -157,8 +157,8 @@ class matrix_handler_filter extends views_handler_filter_string {
     // Views does not apper to want to save anything from this form other than 'value' so the row, col, and value will be concatinated into the value cell.
     $form_state['values']['options']['value'] = $form_state['values']['options']['row'] .'_____'. $form_state['values']['options']['col'] .'_____'. $form_state['values']['options']['value'];
   }
-  
-  
+
+
   function admin_summary() {
     if (!empty($this->options['exposed'])) {
       return t('exposed');
@@ -166,17 +166,17 @@ class matrix_handler_filter extends views_handler_filter_string {
 
     $options = $this->operator_options('short');
     $op = check_plain($options[$this->operator]);
-    
+
     $rows = $this->row_list();
     $cols = $this->col_list();
-    
+
     if (isset($this->value)) {
       list($row, $col, $value) = explode('_____', $this->value);
       return t("Cell at row '%row', column '%col' %op %value", array('%row' => $rows[$row], '%col' => $cols[$col], '%op' => $op, '%value' => $value));
     }
     return $output;
   }
-  
+
   function operator() {
     return $this->operator == '=' ? 'LIKE' : 'NOT LIKE';
   }
@@ -194,12 +194,12 @@ class matrix_handler_filter extends views_handler_filter_string {
     $field = substr("$this->table_alias.$this->real_field", 0, -5);
 
     $info = $this->operators();
-    
+
     if (!empty($info[$this->operator]['method'])) {
       $this->{$info[$this->operator]['method']}($field);
     }
   }
-  
+
   function op_equal($field) {
     $operator = $this->operator();
     list($row, $col, $value) = explode('_____', $this->value);
@@ -271,14 +271,14 @@ class matrix_handler_filter extends views_handler_filter_string {
     list($row, $col, $value) = explode('_____', $this->value);
 
     $this->query->add_where($this->options['group'], $field .'row', $row, '=');
-    $this->query->add_where($this->options['group'], $field .'col', $col, '=');    
+    $this->query->add_where($this->options['group'], $field .'col', $col, '=');
     $this->query->add_where_expression($this->options['group'], $field ."value LIKE $placeholder", array($placeholder => '%' . db_like($value)));
   }
 
   function op_not_ends($field) {
     $placeholder = $this->placeholder();
     list($row, $col, $value) = explode('_____', $this->value);
-    
+
     $this->query->add_where($this->options['group'], $field .'row', $row, '=');
     $this->query->add_where($this->options['group'], $field .'col', $col, '=');
     $this->query->add_where_expression($this->options['group'], $field ."value NOT LIKE $placeholder", array($placeholder => '%' . db_like($value)));
@@ -287,7 +287,7 @@ class matrix_handler_filter extends views_handler_filter_string {
   function op_not($field) {
     $placeholder = $this->placeholder();
     list($row, $col, $value) = explode('_____', $this->value);
-    
+
     $this->query->add_where($this->options['group'], $field .'row', $row, '=');
     $this->query->add_where($this->options['group'], $field .'col', $col, '=');
     $this->query->add_where_expression($this->options['group'], $field ."value NOT LIKE $placeholder", array($placeholder => '%' . db_like($value) . '%'));
@@ -296,7 +296,7 @@ class matrix_handler_filter extends views_handler_filter_string {
   function op_shorter($field) {
     $placeholder = $this->placeholder();
     list($row, $col, $value) = explode('_____', $this->value);
-    
+
     $this->query->add_where($this->options['group'], $field .'row', $row, '=');
     $this->query->add_where($this->options['group'], $field .'col', $col, '=');
     $this->query->add_where($this->options['group'], "LENGTH(". $field ."value) < $placeholder", array($placeholder => $value), 'formula');
@@ -305,7 +305,7 @@ class matrix_handler_filter extends views_handler_filter_string {
   function op_longer($field) {
     $placeholder = $this->placeholder();
     list($row, $col, $value) = explode('_____', $this->value);
-    
+
     $this->query->add_where($this->options['group'], $field .'row', $row, '=');
     $this->query->add_where($this->options['group'], $field .'col', $col, '=');
     $this->query->add_where($this->options['group'], "LENGTH(". $field ."value) > $placeholder", array($placeholder => $value), 'formula');
@@ -319,7 +319,7 @@ class matrix_handler_filter extends views_handler_filter_string {
       $operator = "<>";
     }
     list($row, $col, $value) = explode('_____', $this->value);
-    
+
     $this->query->add_where($this->options['group'], $field .'row', $row, '=');
     $this->query->add_where($this->options['group'], $field .'col', $col, '=');
     $this->query->add_where($this->options['group'], $field .'value', NULL, $operator);
