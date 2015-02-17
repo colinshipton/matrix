@@ -15,7 +15,7 @@ function matrix_field_settings_form_text($field, $instance, $has_data) {
   $form['rows_count'] = array(
     '#type' => 'textfield',
     '#title' => t('Number of rows'),
-    '#description' => t('The number of rows to display in the grid. Enter "-1" for unlimited.'),
+    '#description' => t('The number of rows to display in the grid.'),
     '#required' => TRUE,
     '#size' => 3,
     '#default_value' => $settings['rows_count'],
@@ -24,7 +24,7 @@ function matrix_field_settings_form_text($field, $instance, $has_data) {
     '#type' => 'textfield',
     '#title' => t('Number of columns'),
     '#default_value' => $settings['cols_count'],
-    '#description' => t('The number of columns to display in the grid. Enter "-1" for unlimited.'),
+    '#description' => t('The number of columns to display in the grid.'),
     '#required' => TRUE,
     '#size' => 3,
   );
@@ -147,7 +147,7 @@ function matrix_field_settings_form_custom($field, $instance, $has_data) {
     '#type' => 'textfield',
     '#title' => t('Number of columns'),
     '#default_value' => $settings['cols_count'],
-    '#description' => t('The number of columns to display in the grid. Enter "-1" for unlimited.'),
+    '#description' => t('The number of columns to display in the grid.'),
     '#required' => TRUE,
     '#size' => 3,
     '#ajax' => array(
@@ -158,7 +158,7 @@ function matrix_field_settings_form_custom($field, $instance, $has_data) {
   $form['rows_count'] = array(
     '#type' => 'textfield',
     '#title' => t('Number of rows'),
-    '#description' => t('The number of rows to display in the grid. Enter "-1" for unlimited.'),
+    '#description' => t('The number of rows to display in the grid.'),
     '#required' => TRUE,
     '#size' => 3,
     '#default_value' => $settings['rows_count'],
